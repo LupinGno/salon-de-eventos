@@ -1,0 +1,8 @@
+<% if (errores && errores.length) { %>
+<div class="alert alert-danger" role="alert">
+    <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle-fill"></i> Revisa lo siguiente:</div>
+    <ul class="mb-0 ps-3">
+        <% errores.forEach(e => { %><li><%= e %></li><% }) %>
+    </ul>
+</div>
+<% } %>

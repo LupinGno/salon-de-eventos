@@ -1,0 +1,73 @@
+<%- include('../partials/encabezado') %>
+<% const editar = Boolean(datos.id) %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <h1 class="h3 mb-0">Temporadas</h1>
+  <p class="text-body-secondary mb-0">Los menús de temporada se planean con anticipación: sus productos y sabores solo se venden entre las fechas.</p>
+</div>
+
+<%- include('_nav') %>
+<%- include('../partials/errores', { errores }) %>
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><%= editar ? 'Modificar temporada' : 'Nueva temporada' %></h2>
+        <form action="/catalogos/temporadas<%= editar ? '/' + datos.id : '' %>" method="post" class="needs-validation" novalidate>
+          <div class="mb-3">
+            <label class="form-label" for="nombre">Nombre</label>
+            <input class="form-control" id="nombre" name="nombre" maxlength="60" required value="<%= datos.nombre || '' %>" placeholder="Ej. Día de Muertos">
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label" for="fecha_inicio">Inicio</label>
+              <input class="form-control" id="fecha_inicio" name="fecha_inicio" type="date" required value="<%= datos.fecha_inicio || '' %>">
+            </div>
+            <div class="col-6">
+              <label class="form-label" for="fecha_fin">Fin</label>
+              <input class="form-control" id="fecha_fin" name="fecha_fin" type="date" required value="<%= datos.fecha_fin || '' %>">
+            </div>
+          </div>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" role="switch" id="activo" name="activo" value="1" <%= Number(datos.activo) ? 'checked' : '' %>>
+            <label class="form-check-label" for="activo">Activa</label>
+          </div>
+          <div class="d-flex gap-2">
+            <% if (editar) { %><a href="/catalogos/temporadas" class="btn btn-outline-secondary">Cancelar</a><% } %>
+            <button class="btn btn-marca"><i class="bi bi-check-lg"></i> <%= editar ? 'Guardar' : 'Crear temporada' %></button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead><tr><th>Temporada</th><th>Fechas</th><th>Estado</th><th>Usa</th><th class="text-end"></th></tr></thead>
+          <tbody>
+            <% if (!temporadas.length) { %><tr><td colspan="5" class="text-center text-body-secondary py-4">Aún no hay temporadas.</td></tr><% } %>
+            <% temporadas.forEach(t => { %>
+            <tr>
+              <td class="fw-semibold"><%= t.nombre %></td>
+              <td class="small text-nowrap"><%= f.fechaCorta(t.fecha_inicio) %> – <%= f.fechaCorta(t.fecha_fin) %></td>
+              <td><span class="badge text-bg-<%= t.estado.clase %>"><%= t.estado.texto %></span></td>
+              <td class="small text-body-secondary"><%= t.productos %> producto(s), <%= t.estilos %> sabor(es)</td>
+              <td class="text-end text-nowrap">
+                <a href="/catalogos/temporadas?editar=<%= t.id %>" class="btn btn-sm btn-outline-primary" title="Modificar"><i class="bi bi-pencil-square"></i></a>
+                <form action="/catalogos/temporadas/<%= t.id %>/eliminar" method="post" class="d-inline form-confirmar" data-titulo="¿Eliminar temporada?" data-texto="Se eliminará &quot;<%= t.nombre %>&quot;.">
+                  <button class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="bi bi-trash3"></i></button>
+                </form>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="small text-body-secondary mt-2">Para que un producto sea de temporada, elige la temporada en su receta; para un sabor, en su estilo.</p>
+  </div>
+</div>
+
+<%- include('../partials/pie') %>

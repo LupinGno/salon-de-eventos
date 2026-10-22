@@ -1,0 +1,38 @@
+<%- include('../partials/encabezado') %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <h1 class="h3 mb-0">Administración y catálogos</h1>
+  <p class="text-body-secondary mb-0">Todo lo que la caja y las rentas van a usar se configura aquí.</p>
+</div>
+
+<%
+const tarjetas = [
+  ['/catalogos/productos', 'Recetas', 'egg-fried', `${c.productos_activos} de ${c.productos} a la venta`, 'Ingredientes fijos, móviles, extras, estilos, tamaños y piezas.'],
+  ['/catalogos/ingredientes', 'Ingredientes', 'basket', `${c.ingredientes} registrados`, 'Catálogo general para armar recetas y extras.'],
+  ['/catalogos/temporadas', 'Temporadas', 'calendar-event', `${c.temporadas} planeadas`, 'Día de Muertos, Navidad y las que crees, con fechas.'],
+  ['/catalogos/mesas', 'Mesas', 'grid-3x3-gap', `${c.mesas} activas`, 'Añade o quita mesas; la caja las ve al momento.'],
+  ['/catalogos/salones', 'Salones', 'building', `${c.salones} salones`, 'Tamaño, aforo máximo, mobiliario y precios.'],
+  ['/catalogos/brincolines', 'Brincolines', 'balloon', `${c.brincolines} en catálogo`, 'Imagen, medidas, precio, garantía y estado.'],
+  ['/catalogos/imagenes', 'Imágenes', 'images', `${c.imagenes} en la galería`, 'Una misma imagen sirve para varios estilos.'],
+  ['/catalogos/menu', 'Vista del menú', 'eye', 'Como lo verá la caja', 'Qué se puede vender hoy y por qué lo demás no.']
+]
+if (usuario.rol === 'Administrador') tarjetas.push(['/catalogos/permisos', 'Permisos por puesto', 'shield-lock', '7 roles', 'Qué módulo ve cada puesto.'])
+%>
+<div class="row g-3">
+  <% tarjetas.forEach(([ruta, nombre, icono, dato, texto]) => { %>
+  <div class="col-sm-6 col-xl-4">
+    <a href="<%= ruta %>" class="card h-100 tarjeta-modulo text-decoration-none">
+      <div class="card-body d-flex gap-3 align-items-start">
+        <div class="icono-modulo"><i class="bi bi-<%= icono %>"></i></div>
+        <div>
+          <h2 class="h6 mb-1 text-body"><%= nombre %></h2>
+          <p class="small text-body-secondary mb-2"><%= texto %></p>
+          <span class="badge text-bg-light border"><%= dato %></span>
+        </div>
+      </div>
+    </a>
+  </div>
+  <% }) %>
+</div>
+
+<%- include('../partials/pie') %>

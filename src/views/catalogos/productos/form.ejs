@@ -1,0 +1,164 @@
+<%- include('../../partials/encabezado') %>
+<% const editar = modo === 'editar' %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <a href="<%= editar ? '/catalogos/productos/' + datos.id : '/catalogos/productos' %>" class="small link-secondary text-decoration-none"><i class="bi bi-arrow-left"></i> <%= editar ? datos.nombre : 'Recetas' %></a>
+  <h1 class="h3 mb-0 mt-1"><%= titulo %></h1>
+</div>
+
+<%- include('../../partials/errores', { errores }) %>
+
+<form action="<%= editar ? '/catalogos/productos/' + datos.id : '/catalogos/productos' %>" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h2 class="h6 text-uppercase texto-seccion mb-3">Datos del producto</h2>
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label" for="nombre">Nombre</label>
+              <input class="form-control" id="nombre" name="nombre" maxlength="80" required value="<%= datos.nombre || '' %>">
+              <div class="invalid-feedback">Escribe el nombre.</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="categoria_id">Categoría</label>
+              <select class="form-select" id="categoria_id" name="categoria_id" required>
+                <% categorias.forEach(c => { %>
+                  <option value="<%= c.id %>" data-quitar="<%= c.permite_quitar %>" <%= Number(datos.categoria_id) === c.id ? 'selected' : '' %>><%= c.nombre %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="descripcion">Descripción</label>
+              <input class="form-control" id="descripcion" name="descripcion" maxlength="255" value="<%= datos.descripcion || '' %>">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label" for="precio_base">Precio base ($)</label>
+              <input class="form-control" id="precio_base" name="precio_base" type="number" step="0.01" min="0" required value="<%= datos.precio_base ?? '' %>">
+              <div class="form-text">Si tiene tamaños, manda el precio del tamaño.</div>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label" for="piezas_por_orden">Piezas por orden</label>
+              <input class="form-control" id="piezas_por_orden" name="piezas_por_orden" type="number" min="1" max="200" value="<%= datos.piezas_por_orden ?? '' %>">
+              <div class="form-text">Ej. alitas = 10. Vacío si no aplica.</div>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label" for="temporada_id">Temporada</label>
+              <select class="form-select" id="temporada_id" name="temporada_id">
+                <option value="">Todo el año</option>
+                <% temporadas.forEach(t => { %>
+                  <option value="<%= t.id %>" <%= Number(datos.temporada_id) === t.id ? 'selected' : '' %>><%= t.nombre %> (<%= f.fechaCorta(t.fecha_inicio) %> – <%= f.fechaCorta(t.fecha_fin) %>)</option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="vigente_hasta">Vigencia de existencias</label>
+              <input class="form-control" id="vigente_hasta" name="vigente_hasta" type="datetime-local" value="<%= datos.vigente_hasta || '' %>">
+              <div class="form-text">Al llegar esta fecha el sistema lo desactiva solo. Vacío = sin límite.</div>
+            </div>
+            <div class="col-sm-6 d-flex flex-column justify-content-center gap-2">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="activo" name="activo" value="1" <%= Number(datos.activo) ? 'checked' : '' %>>
+                <label class="form-check-label" for="activo">Activo (se puede vender)</label>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="requiere_preparacion" name="requiere_preparacion" value="1" <%= Number(datos.requiere_preparacion) ? 'checked' : '' %>>
+                <label class="form-check-label" for="requiere_preparacion">Va a cocina (se prepara)</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <%- include('../../partials/selector_imagen', { imagenes, seleccionada: datos.imagen_id, etiqueta: 'Imagen del alimento', permitirNinguna: true }) %>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <!-- Ingredientes de la receta -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h2 class="h6 text-uppercase texto-seccion mb-1">Receta</h2>
+          <p class="small text-body-secondary">
+            <i class="bi bi-lock-fill"></i> <strong>Fijo</strong>: base del platillo, no se quita (pan, carne, leche).
+            <i class="bi bi-dash-circle"></i> <strong>Móvil</strong>: el cliente lo puede quitar sin que cambie el precio.
+          </p>
+          <div id="aviso-no-quitar" class="alert alert-info py-2 small d-none">En esta categoría no se quitan ingredientes: todos deben ser fijos.</div>
+          <div id="lista-ingredientes" class="d-grid gap-2">
+            <% receta.forEach(r => { %>
+              <div class="fila-dinamica d-flex gap-2">
+                <select name="ing_id" class="form-select form-select-sm">
+                  <% ingredientes.forEach(i => { %><option value="<%= i.id %>" <%= r.id === i.id ? 'selected' : '' %>><%= i.nombre %></option><% }) %>
+                </select>
+                <select name="ing_tipo" class="form-select form-select-sm w-auto">
+                  <option value="fijo" <%= r.tipo === 'fijo' ? 'selected' : '' %>>Fijo</option>
+                  <option value="movil" <%= r.tipo === 'movil' ? 'selected' : '' %>>Móvil</option>
+                </select>
+                <button type="button" class="btn btn-sm btn-outline-danger quitar-fila" aria-label="Quitar"><i class="bi bi-x-lg"></i></button>
+              </div>
+            <% }) %>
+          </div>
+          <template id="tpl-ingrediente">
+            <div class="fila-dinamica d-flex gap-2">
+              <select name="ing_id" class="form-select form-select-sm">
+                <% ingredientes.forEach(i => { %><option value="<%= i.id %>"><%= i.nombre %></option><% }) %>
+              </select>
+              <select name="ing_tipo" class="form-select form-select-sm w-auto">
+                <option value="fijo">Fijo</option><option value="movil">Móvil</option>
+              </select>
+              <button type="button" class="btn btn-sm btn-outline-danger quitar-fila" aria-label="Quitar"><i class="bi bi-x-lg"></i></button>
+            </div>
+          </template>
+          <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-agregar="ingrediente"><i class="bi bi-plus-lg"></i> Agregar ingrediente</button>
+          <a href="/catalogos/ingredientes" class="small ms-2" target="_blank">¿Falta uno? Créalo aquí</a>
+        </div>
+      </div>
+
+      <!-- Extras con costo -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h2 class="h6 text-uppercase texto-seccion mb-1">Extras con costo</h2>
+          <p class="small text-body-secondary">Cada extra se cobra aparte (ej. carne extra +$30).</p>
+          <div id="lista-extras" class="d-grid gap-2">
+            <% extrasForm.forEach(x => { %>
+              <div class="fila-dinamica d-flex gap-2">
+                <select name="ext_id" class="form-select form-select-sm">
+                  <% ingredientes.forEach(i => { %><option value="<%= i.id %>" <%= x.id === i.id ? 'selected' : '' %>><%= i.nombre %></option><% }) %>
+                </select>
+                <div class="input-group input-group-sm w-50">
+                  <span class="input-group-text">+$</span>
+                  <input name="ext_precio" type="number" step="0.01" min="0.5" class="form-control" value="<%= x.precio %>" required>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger quitar-fila" aria-label="Quitar"><i class="bi bi-x-lg"></i></button>
+              </div>
+            <% }) %>
+          </div>
+          <template id="tpl-extra">
+            <div class="fila-dinamica d-flex gap-2">
+              <select name="ext_id" class="form-select form-select-sm">
+                <% ingredientes.forEach(i => { %><option value="<%= i.id %>"><%= i.nombre %></option><% }) %>
+              </select>
+              <div class="input-group input-group-sm w-50">
+                <span class="input-group-text">+$</span>
+                <input name="ext_precio" type="number" step="0.01" min="0.5" class="form-control" required>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-danger quitar-fila" aria-label="Quitar"><i class="bi bi-x-lg"></i></button>
+            </div>
+          </template>
+          <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-agregar="extra"><i class="bi bi-plus-lg"></i> Agregar extra</button>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <a href="<%= editar ? '/catalogos/productos/' + datos.id : '/catalogos/productos' %>" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-marca"><i class="bi bi-check-lg"></i> <%= editar ? 'Guardar cambios' : 'Crear receta' %></button>
+      </div>
+      <% if (!editar) { %><p class="small text-body-secondary mt-2">Después de crearla podrás añadirle estilos y tamaños.</p><% } %>
+    </div>
+  </div>
+</form>
+
+<%- include('../../partials/pie') %>

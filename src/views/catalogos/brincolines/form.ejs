@@ -1,0 +1,69 @@
+<%- include('../../partials/encabezado') %>
+<% const editar = modo === 'editar' %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <a href="/catalogos/brincolines" class="small link-secondary text-decoration-none"><i class="bi bi-arrow-left"></i> Brincolines</a>
+  <h1 class="h3 mb-0 mt-1"><%= titulo %></h1>
+</div>
+
+<%- include('../../partials/errores', { errores }) %>
+
+<form action="<%= editar ? '/catalogos/brincolines/' + datos.id : '/catalogos/brincolines' %>" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label" for="nombre">Nombre o modelo</label>
+              <input class="form-control" id="nombre" name="nombre" maxlength="80" required value="<%= datos.nombre || '' %>">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="estado">Estado</label>
+              <select class="form-select" id="estado" name="estado">
+                <% Object.entries(ESTADOS_BRINCOLIN).forEach(([k, v]) => { %><option value="<%= k %>" <%= datos.estado === k ? 'selected' : '' %>><%= v %></option><% }) %>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="descripcion">Descripción</label>
+              <input class="form-control" id="descripcion" name="descripcion" maxlength="255" value="<%= datos.descripcion || '' %>">
+            </div>
+            <div class="col-4">
+              <label class="form-label" for="largo_m">Largo (m)</label>
+              <input class="form-control" id="largo_m" name="largo_m" type="number" step="0.01" min="0.5" max="30" required value="<%= datos.largo_m ?? '' %>">
+            </div>
+            <div class="col-4">
+              <label class="form-label" for="ancho_m">Ancho (m)</label>
+              <input class="form-control" id="ancho_m" name="ancho_m" type="number" step="0.01" min="0.5" max="30" required value="<%= datos.ancho_m ?? '' %>">
+            </div>
+            <div class="col-4">
+              <label class="form-label" for="alto_m">Alto (m)</label>
+              <input class="form-control" id="alto_m" name="alto_m" type="number" step="0.01" min="0.5" max="15" required value="<%= datos.alto_m ?? '' %>">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="precio_dia">Precio por día ($)</label>
+              <input class="form-control" id="precio_dia" name="precio_dia" type="number" step="0.01" min="1" required value="<%= datos.precio_dia ?? '' %>">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="garantia">Garantía ($)</label>
+              <input class="form-control" id="garantia" name="garantia" type="number" step="0.01" min="0" required value="<%= datos.garantia ?? 0 %>">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="/catalogos/brincolines" class="btn btn-outline-secondary">Cancelar</a>
+        <button class="btn btn-marca"><i class="bi bi-check-lg"></i> <%= editar ? 'Guardar cambios' : 'Crear brincolín' %></button>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <%- include('../../partials/selector_imagen', { imagenes, seleccionada: datos.imagen_id, etiqueta: 'Imagen del brincolín', permitirNinguna: true }) %>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<%- include('../../partials/pie') %>

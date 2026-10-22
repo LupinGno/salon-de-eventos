@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <%- include('partials/head', { titulo: titulo }) %>
+</head>
+<body class="pantalla-acceso d-flex align-items-center py-4">
+    <%- include('partials/burbujas') %>
+    <main class="form-acceso form-acceso-ancho w-100 m-auto text-center">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-body p-5">
+                <div class="display-4 fw-bold texto-marca mb-2"><%= codigo %></div>
+                <h1 class="h4"><%= titulo %></h1>
+                <p class="text-body-secondary"><%= mensaje %></p>
+                <a href="/" class="btn btn-marca"><i class="bi bi-house-door"></i> Ir al inicio</a>
+                <% if (codigo === 403) { %>
+                <a href="/logout" class="btn btn-outline-secondary ms-1">Entrar con otra cuenta</a>
+                <% } %>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,8 @@
+        </main>
+    </div>
+</div>
+<%- include('scripts') %>
+<% if (typeof scriptsExtra !== 'undefined') { scriptsExtra.forEach(s => { %><script src="<%= s %>"></script>
+<% }) } %>
+</body>
+</html>

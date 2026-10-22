@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <%- include('partials/head', { titulo: 'Iniciar sesión' }) %>
+</head>
+<body class="pantalla-acceso d-flex align-items-center py-4">
+    <%- include('partials/burbujas') %>
+    <main class="form-acceso w-100 m-auto">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-body p-4 p-sm-5">
+                <div class="text-center mb-4">
+                    <img src="/img/logo.svg" alt="" class="logo-aero mb-2" width="230" height="179">
+                    <h1 class="h4 mb-1">Salón de Eventos y Snacks</h1>
+                    <p class="eslogan mb-2">El futuro que se te prometió</p>
+                    <p class="text-body-secondary small mb-0">Inicia sesión para continuar</p>
+                </div>
+
+                <form action="/login" method="post" novalidate>
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="usuario" name="usuario" placeholder="usuario"
+                               value="<%= datos.usuario || '' %>" autocomplete="username" required autofocus>
+                        <label for="usuario">Usuario</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Contraseña"
+                               autocomplete="current-password" required>
+                        <label for="password">Contraseña</label>
+                    </div>
+                    <button class="btn btn-marca w-100 py-2" type="submit">
+                        <i class="bi bi-box-arrow-in-right"></i> Entrar
+                    </button>
+                </form>
+
+                <p class="text-center small mt-4 mb-0">
+                    ¿No tienes cuenta? <a href="/register" class="link-marca fw-semibold">Regístrate aquí</a>
+                </p>
+            </div>
+        </div>
+    </main>
+    <%- include('partials/scripts') %>
+</body>
+</html>

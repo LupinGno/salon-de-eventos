@@ -1,0 +1,18 @@
+<%
+const secciones = [
+  ['/catalogos/productos', 'Recetas', 'egg-fried'],
+  ['/catalogos/ingredientes', 'Ingredientes', 'basket'],
+  ['/catalogos/temporadas', 'Temporadas', 'calendar-event'],
+  ['/catalogos/mesas', 'Mesas', 'grid-3x3-gap'],
+  ['/catalogos/salones', 'Salones', 'building'],
+  ['/catalogos/brincolines', 'Brincolines', 'balloon'],
+  ['/catalogos/imagenes', 'Imágenes', 'images'],
+  ['/catalogos/menu', 'Vista del menú', 'eye']
+]
+if (usuario.rol === 'Administrador') secciones.push(['/catalogos/permisos', 'Permisos', 'shield-lock'])
+%>
+<nav class="nav nav-pills nav-catalogo gap-1 mb-4 flex-nowrap flex-xl-wrap overflow-auto pb-1" aria-label="Secciones del catálogo">
+  <% secciones.forEach(([ruta, nombre, icono]) => { %>
+    <a class="nav-link text-nowrap <%= rutaActual.startsWith(ruta) ? 'active' : '' %>" href="<%= ruta %>"><i class="bi bi-<%= icono %>"></i> <%= nombre %></a>
+  <% }) %>
+</nav>

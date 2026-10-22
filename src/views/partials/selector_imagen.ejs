@@ -1,0 +1,30 @@
+<%#
+  Selector de imagen (US-17): elegir una de la galería (se puede repetir la misma
+  imagen en varios productos/estilos) o subir una nueva.
+  Recibe: imagenes, seleccionada (id), etiqueta, permitirNinguna
+%>
+<% const sel = Number(seleccionada) || 0 %>
+<div class="mb-3">
+  <label class="form-label d-block"><%= etiqueta || 'Imagen' %></label>
+  <div class="galeria-selector">
+    <% if (typeof permitirNinguna === 'undefined' || permitirNinguna) { %>
+    <label class="opcion-imagen">
+      <input type="radio" name="imagen_id" value="" <%= sel ? '' : 'checked' %>>
+      <span class="miniatura sin-imagen"><i class="bi bi-image"></i></span>
+      <small>Ninguna</small>
+    </label>
+    <% } %>
+    <% imagenes.forEach(img => { %>
+    <label class="opcion-imagen" title="<%= img.nombre %>">
+      <input type="radio" name="imagen_id" value="<%= img.id %>" <%= sel === img.id ? 'checked' : '' %>>
+      <img class="miniatura" src="<%= img.archivo %>" alt="" loading="lazy">
+      <small class="text-truncate"><%= img.nombre %></small>
+    </label>
+    <% }) %>
+  </div>
+  <div class="input-group input-group-sm mt-2">
+    <span class="input-group-text"><i class="bi bi-upload"></i>&nbsp;o sube una nueva</span>
+    <input type="file" class="form-control" name="archivo" accept=".jpg,.jpeg,.png,.webp,.gif">
+  </div>
+  <div class="form-text">JPG, PNG, WEBP o GIF de hasta 2 MB. Si subes una, se usa esa y queda en la galería.</div>
+</div>

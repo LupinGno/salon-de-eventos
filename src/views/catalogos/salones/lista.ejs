@@ -1,0 +1,63 @@
+<%- include('../../partials/encabezado') %>
+
+<div class="d-flex justify-content-between flex-wrap align-items-center pt-4 pb-2 mb-3 border-bottom gap-2">
+  <div>
+    <h1 class="h3 mb-0">Salones</h1>
+    <p class="text-body-secondary mb-0">Tamaño, aforo máximo, brincolines incluidos y mobiliario de cada salón.</p>
+  </div>
+  <a href="/catalogos/salones/nuevo" class="btn btn-marca"><i class="bi bi-plus-lg"></i> Nuevo salón</a>
+</div>
+
+<%- include('../_nav') %>
+<%- include('../../partials/errores', { errores }) %>
+
+<div class="row g-3 mb-4">
+  <% salones.forEach(s => { %>
+  <div class="col-md-6 col-xl-4">
+    <div class="card border-0 shadow-sm h-100 <%= s.activo ? '' : 'opacity-75' %>">
+      <% if (s.imagen) { %><img src="<%= s.imagen %>" class="card-img-top img-tarjeta" alt=""><% } %>
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <h2 class="h5 mb-1"><%= s.nombre %></h2>
+          <span class="badge text-bg-<%= s.activo ? 'success' : 'secondary' %>"><%= s.activo ? 'Activo' : 'Inactivo' %></span>
+        </div>
+        <p class="small text-body-secondary mb-2"><%= s.descripcion || '' %></p>
+        <div class="d-flex flex-wrap gap-2 small mb-2">
+          <span class="badge text-bg-light border text-capitalize"><i class="bi bi-arrows-angle-expand"></i> <%= s.tamano %></span>
+          <span class="badge text-bg-light border"><i class="bi bi-people"></i> hasta <%= s.aforo_maximo %></span>
+          <span class="badge text-bg-light border"><i class="bi bi-balloon"></i> <%= s.max_brincolines %> brincolín(es)</span>
+        </div>
+        <div class="small"><strong><%= f.dinero(s.precio_renta) %></strong> por evento · cuota <%= f.dinero(s.cuota_garantia) %></div>
+        <div class="small text-body-secondary mt-1"><%= s.mobiliario.map(m => `${m.cantidad} ${m.nombre.toLowerCase()}`).join(' · ') || 'Sin mobiliario registrado' %></div>
+      </div>
+      <div class="card-footer bg-transparent border-0 d-flex gap-2">
+        <a href="/catalogos/salones/<%= s.id %>/editar" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square"></i> Modificar</a>
+        <form action="/catalogos/salones/<%= s.id %>/eliminar" method="post" class="form-confirmar" data-titulo="¿Eliminar salón?" data-texto="Se eliminará &quot;<%= s.nombre %>&quot;.">
+          <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash3"></i> Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <% }) %>
+</div>
+
+<div class="card border-0 shadow-sm" id="mobiliario">
+  <div class="card-body p-4">
+    <h2 class="h6 text-uppercase texto-seccion mb-3">Tipos de mobiliario</h2>
+    <div class="d-grid gap-2 mb-3" style="max-width:520px">
+      <% mobiliario.forEach(m => { %>
+        <form action="/catalogos/mobiliario/<%= m.id %>" method="post" class="d-flex gap-2">
+          <input name="nombre" class="form-control form-control-sm" value="<%= m.nombre %>" maxlength="60" required aria-label="Nombre">
+          <button class="btn btn-sm btn-outline-primary" title="Guardar"><i class="bi bi-check-lg"></i></button>
+          <button class="btn btn-sm btn-outline-danger" formaction="/catalogos/mobiliario/<%= m.id %>/eliminar" title="<%= m.usos ? 'Está asignado a un salón' : 'Eliminar' %>" <%= m.usos ? 'disabled' : '' %>><i class="bi bi-trash3"></i></button>
+        </form>
+      <% }) %>
+    </div>
+    <form action="/catalogos/mobiliario" method="post" class="d-flex gap-2" style="max-width:560px">
+      <input name="nombre" class="form-control form-control-sm" placeholder="Nuevo tipo (ej. Mesa de regalos)" maxlength="60" required>
+      <button class="btn btn-sm btn-marca text-nowrap"><i class="bi bi-plus-lg"></i> Agregar</button>
+    </form>
+  </div>
+</div>
+
+<%- include('../../partials/pie') %>

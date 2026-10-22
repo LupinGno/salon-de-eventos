@@ -1,0 +1,44 @@
+<%- include('../partials/encabezado') %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <h1 class="h3 mb-0">Permisos por puesto</h1>
+  <p class="text-body-secondary mb-0">Marca qué módulo ve cada puesto. Si alguien abre un módulo sin permiso, el servidor responde 403 aunque escriba la dirección a mano.</p>
+</div>
+
+<%- include('_nav') %>
+
+<form action="/catalogos/permisos" method="post">
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="table-responsive">
+      <table class="table align-middle text-center mb-0 tabla-permisos">
+        <thead>
+          <tr>
+            <th class="text-start">Módulo</th>
+            <% roles.forEach(r => { %><th class="small"><%= r.nombre %></th><% }) %>
+          </tr>
+        </thead>
+        <tbody>
+          <% modulos.forEach(m => { %>
+          <tr>
+            <td class="text-start"><i class="bi bi-<%= m.icono %>"></i> <%= m.titulo %>
+              <% if (m.soloAdmin) { %><br><small class="text-body-secondary">Solo administrador</small><% } %>
+            </td>
+            <% roles.forEach(r => { %>
+              <% const esAdmin = r.nombre === ROLES.ADMIN, bloqueado = esAdmin || m.soloAdmin %>
+              <td>
+                <input class="form-check-input" type="checkbox" name="rol_<%= r.id %>" value="<%= m.clave %>"
+                       aria-label="<%= r.nombre %> en <%= m.titulo %>"
+                       <%= esAdmin || tiene.has(r.id + '|' + m.clave) ? 'checked' : '' %> <%= bloqueado ? 'disabled' : '' %>>
+              </td>
+            <% }) %>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p class="small text-body-secondary">El Administrador siempre conserva todos los módulos, para que el sistema nunca se quede sin administración.</p>
+  <button class="btn btn-marca"><i class="bi bi-shield-check"></i> Guardar permisos</button>
+</form>
+
+<%- include('../partials/pie') %>

@@ -1,0 +1,31 @@
+{
+  "name": "salon-eventos-snacks",
+  "version": "0.1.0",
+  "description": "Sistema web para salón de eventos y barra de snacks — Node.js, Express, EJS, Bootstrap 5 y MySQL",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "nodemon src/app.js",
+    "prod": "node src/app.js",
+    "generar-hash": "node src/database/generarHash.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.11.3",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^18.0.3",
+    "ejs": "^6.0.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.4.0",
+    "mysql2": "^3.24.4",
+    "sweetalert2": "^11.26.25"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

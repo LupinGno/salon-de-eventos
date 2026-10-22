@@ -1,0 +1,76 @@
+<%- include('../partials/encabezado') %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <h1 class="h3 mb-0">Vista del menú</h1>
+  <p class="text-body-secondary mb-0">Así lo verá la caja hoy: <strong><%= vendibles.length %></strong> producto(s) a la venta, <strong><%= noVendibles.length %></strong> fuera del menú.</p>
+</div>
+
+<%- include('_nav') %>
+
+<div class="row g-4">
+  <div class="col-xl-8">
+    <% const categorias = [...new Set(vendibles.map(p => p.categoria))] %>
+    <% categorias.forEach(cat => { %>
+      <h2 class="h6 text-uppercase texto-seccion mt-2 mb-2"><%= cat %></h2>
+      <div class="row g-3 mb-3">
+        <% vendibles.filter(p => p.categoria === cat).forEach(p => { %>
+        <div class="col-md-6">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex gap-3">
+              <% if (p.imagen) { %><img src="<%= p.imagen %>" alt="" class="img-menu"><% } %>
+              <div class="flex-grow-1 small">
+                <div class="d-flex justify-content-between gap-2">
+                  <span class="fw-semibold fs-6"><%= p.nombre %></span>
+                  <span class="fw-semibold text-nowrap"><%= p.tamanos.length ? 'desde ' : '' %><%= f.dinero(p.precio_desde) %></span>
+                </div>
+                <% if (p.piezas_por_orden) { %><div class="text-body-secondary"><%= p.piezas_por_orden %> piezas por orden</div><% } %>
+                <% const estilosHoy = p.estilos.filter(e => e.disponible) %>
+                <% if (estilosHoy.length) { %><div class="mt-1"><% estilosHoy.forEach(e => { %><span class="badge text-bg-light border me-1"><%= e.nombre %><%= e.precio_extra > 0 ? ' +' + f.dinero(e.precio_extra) : '' %></span><% }) %></div><% } %>
+                <% if (p.tamanos.length) { %><div class="mt-1 text-body-secondary"><%= p.tamanos.map(t => `${t.nombre} ${f.dinero(t.precio)}`).join(' · ') %></div><% } %>
+                <div class="mt-2">
+                  <% p.fijos.forEach(i => { %><span class="badge chip-fijo me-1 mb-1"><i class="bi bi-lock-fill"></i> <%= i.nombre %></span><% }) %>
+                  <% p.moviles.forEach(i => { %><span class="badge chip-movil me-1 mb-1"><%= i.nombre %></span><% }) %>
+                  <% p.extras.forEach(i => { %><span class="badge chip-extra me-1 mb-1">+<%= i.nombre %> <%= f.dinero(i.precio) %></span><% }) %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    <% }) %>
+
+    <h2 class="h6 text-uppercase texto-seccion mt-4 mb-2">Fuera del menú hoy</h2>
+    <div class="card border-0 shadow-sm">
+      <ul class="list-group list-group-flush">
+        <% if (!noVendibles.length) { %><li class="list-group-item bg-transparent text-body-secondary">Todo está a la venta.</li><% } %>
+        <% noVendibles.forEach(p => { %>
+          <li class="list-group-item bg-transparent d-flex justify-content-between gap-2">
+            <a href="/catalogos/productos/<%= p.id %>"><%= p.nombre %></a>
+            <span class="small text-body-secondary text-end"><%= p.motivo %></span>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Probador: valida como lo hará la caja (US-14) -->
+  <div class="col-xl-4">
+    <div class="card border-0 shadow-sm sticky-xl-top" style="top:64px">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-1">Probar un pedido</h2>
+        <p class="small text-body-secondary">Manda un artículo al servidor como lo hará la caja. El servidor rechaza lo inactivo, quitar fijos y extras que no existen.</p>
+        <label class="form-label small mb-0" for="probar-producto">Producto</label>
+        <select id="probar-producto" class="form-select form-select-sm mb-2">
+          <option value="">Elige uno…</option>
+          <% todos.forEach(p => { %><option value="<%= p.id %>"><%= p.nombre %><%= p.vendible ? '' : ' (fuera del menú)' %></option><% }) %>
+        </select>
+        <div id="probar-opciones" class="small"></div>
+        <button id="probar-enviar" class="btn btn-sm btn-marca w-100 mt-2" disabled><i class="bi bi-send"></i> Validar en el servidor</button>
+        <div id="probar-resultado" class="mt-3 small" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/pie', { scriptsExtra: ['/js/probador.js'] }) %>

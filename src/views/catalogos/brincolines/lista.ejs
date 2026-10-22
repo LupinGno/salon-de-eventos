@@ -1,0 +1,46 @@
+<%- include('../../partials/encabezado') %>
+<% const color = { disponible: 'success', en_limpieza: 'info', en_reparacion: 'warning', baja: 'secondary' } %>
+
+<div class="d-flex justify-content-between flex-wrap align-items-center pt-4 pb-2 mb-3 border-bottom gap-2">
+  <div>
+    <h1 class="h3 mb-0">Brincolines</h1>
+    <p class="text-body-secondary mb-0">Imagen, medidas, precio por día, garantía y estado de cada brincolín.</p>
+  </div>
+  <a href="/catalogos/brincolines/nuevo" class="btn btn-marca"><i class="bi bi-plus-lg"></i> Nuevo brincolín</a>
+</div>
+
+<%- include('../_nav') %>
+<%- include('../../partials/errores', { errores }) %>
+
+<div class="row g-3">
+  <% brincolines.forEach(b => { %>
+  <div class="col-md-6 col-xl-4">
+    <div class="card border-0 shadow-sm h-100 <%= b.estado === 'baja' ? 'opacity-75' : '' %>">
+      <% if (b.imagen) { %><img src="<%= b.imagen %>" class="card-img-top img-tarjeta" alt=""><% } %>
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <h2 class="h5 mb-1"><%= b.nombre %></h2>
+          <span class="badge text-bg-<%= color[b.estado] %>"><%= ESTADOS_BRINCOLIN[b.estado] %></span>
+        </div>
+        <p class="small text-body-secondary mb-2"><%= b.descripcion || '' %></p>
+        <div class="small mb-1"><i class="bi bi-rulers"></i> <%= b.largo_m %> × <%= b.ancho_m %> m, <%= b.alto_m %> m de alto</div>
+        <div class="small"><strong><%= f.dinero(b.precio_dia) %></strong> por día · garantía <%= f.dinero(b.garantia) %></div>
+        <form action="/catalogos/brincolines/<%= b.id %>/estado" method="post" class="d-flex gap-2 mt-3">
+          <select name="estado" class="form-select form-select-sm" aria-label="Estado de <%= b.nombre %>">
+            <% Object.entries(ESTADOS_BRINCOLIN).forEach(([k, v]) => { %><option value="<%= k %>" <%= b.estado === k ? 'selected' : '' %>><%= v %></option><% }) %>
+          </select>
+          <button class="btn btn-sm btn-outline-primary text-nowrap">Cambiar</button>
+        </form>
+      </div>
+      <div class="card-footer bg-transparent border-0 d-flex gap-2">
+        <a href="/catalogos/brincolines/<%= b.id %>/editar" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square"></i> Modificar</a>
+        <form action="/catalogos/brincolines/<%= b.id %>/eliminar" method="post" class="form-confirmar" data-titulo="¿Eliminar brincolín?" data-texto="Se eliminará &quot;<%= b.nombre %>&quot;. Si ya se rentó, mejor dalo de baja.">
+          <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash3"></i> Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <% }) %>
+</div>
+
+<%- include('../../partials/pie') %>

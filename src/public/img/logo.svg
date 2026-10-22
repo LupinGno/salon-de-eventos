@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 234" role="img" aria-labelledby="logoTitulo">
+  <title id="logoTitulo">Salón de Eventos y Snacks</title>
+  <defs>
+    <!-- Arco -->
+    <linearGradient id="gArco" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7c3aed"/>
+      <stop offset=".5" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="gBrillo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".75"/>
+      <stop offset=".45" stop-color="#fff" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="gCielo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#bfe9ff"/>
+      <stop offset="1" stop-color="#f4fbff"/>
+    </linearGradient>
+    <!-- Estrella -->
+    <linearGradient id="gOro" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff3a3"/>
+      <stop offset=".5" stop-color="#ffd23f"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <symbol id="estrella" viewBox="-11 -11 22 22">
+      <polygon points="0,-10 2.65,-3.64 9.51,-3.09 4.28,1.39 5.88,8.09 0,4.5 -5.88,8.09 -4.28,1.39 -9.51,-3.09 -2.65,-3.64"
+               fill="url(#gOro)" stroke="#e08a00" stroke-width="1" stroke-linejoin="round"/>
+      <ellipse cx="-1.5" cy="-3.5" rx="3" ry="1.6" fill="#fff" opacity=".8"/>
+    </symbol>
+    <!-- Esferas -->
+    <radialGradient id="gVerde" cx=".38" cy=".32" r=".75">
+      <stop offset="0" stop-color="#c9ff9e"/><stop offset=".5" stop-color="#5fd35f"/><stop offset="1" stop-color="#1b8a34"/>
+    </radialGradient>
+    <radialGradient id="gNaranja" cx=".38" cy=".32" r=".75">
+      <stop offset="0" stop-color="#ffe2a8"/><stop offset=".5" stop-color="#ffa53a"/><stop offset="1" stop-color="#d9620b"/>
+    </radialGradient>
+    <radialGradient id="gAzul" cx=".38" cy=".32" r=".75">
+      <stop offset="0" stop-color="#d6f3ff"/><stop offset=".5" stop-color="#4fb8ef"/><stop offset="1" stop-color="#1166b0"/>
+    </radialGradient>
+    <symbol id="reflejo" viewBox="-10 -10 20 20">
+      <ellipse cx="-2.5" cy="-4.5" rx="5" ry="3" fill="#fff" opacity=".85"/>
+    </symbol>
+    <!-- Snacks -->
+    <linearGradient id="gBetun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e9b8ff"/><stop offset="1" stop-color="#9333ea"/>
+    </linearGradient>
+    <linearGradient id="gCapacillo" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3b82f6"/><stop offset=".5" stop-color="#7dd3fc"/><stop offset="1" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="gVaso" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e0f7ff" stop-opacity=".9"/><stop offset=".35" stop-color="#ffffff" stop-opacity=".95"/><stop offset="1" stop-color="#b9e6fb" stop-opacity=".9"/>
+    </linearGradient>
+    <linearGradient id="gBebida" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5eead4"/><stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sombra en el piso -->
+  <ellipse cx="150" cy="227" rx="118" ry="6" fill="#0d6fa8" opacity=".15"/>
+
+  <!-- Interior del arco (cielo) -->
+  <path d="M88 218 V118 A62 62 0 0 1 212 118 V218 Z" fill="url(#gCielo)"/>
+
+  <!-- Confeti -->
+  <g>
+    <rect x="128" y="78" width="6" height="3" rx="1" fill="#f472b6" transform="rotate(-30 131 79)"/>
+    <rect x="165" y="74" width="6" height="3" rx="1" fill="#facc15" transform="rotate(25 168 75)"/>
+    <rect x="140" y="100" width="5" height="3" rx="1" fill="#22c55e" transform="rotate(50 142 101)"/>
+    <rect x="158" y="96" width="5" height="3" rx="1" fill="#a855f7" transform="rotate(-15 160 97)"/>
+    <rect x="118" y="104" width="5" height="3" rx="1" fill="#38bdf8" transform="rotate(10 120 105)"/>
+    <rect x="178" y="102" width="5" height="3" rx="1" fill="#fb923c" transform="rotate(-40 180 103)"/>
+    <circle cx="148" cy="70" r="2.2" fill="#38bdf8"/>
+    <circle cx="122" cy="90" r="2" fill="#facc15"/>
+    <circle cx="176" cy="88" r="2" fill="#f472b6"/>
+    <circle cx="150" cy="114" r="1.8" fill="#fb923c"/>
+    <!-- destello -->
+    <path d="M150 80 L153 89 L162 92 L153 95 L150 104 L147 95 L138 92 L147 89 Z" fill="#fff" stroke="#bfe9ff" stroke-width="1"/>
+  </g>
+
+  <!-- Arco -->
+  <path d="M45 218 V118 A105 105 0 0 1 255 118 V218 H212 V118 A62 62 0 0 0 88 118 V218 Z"
+        fill="url(#gArco)" stroke="#5b21b6" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M45 218 V118 A105 105 0 0 1 255 118 V218 H212 V118 A62 62 0 0 0 88 118 V218 Z"
+        fill="url(#gBrillo)"/>
+  <path d="M55 150 V122 A95 95 0 0 1 138 24" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".55"/>
+
+  <!-- Estrellas sobre el arco -->
+  <use href="#estrella" xlink:href="#estrella" x="132" y="16" width="36" height="36"/>
+  <use href="#estrella" xlink:href="#estrella" x="78" y="46" width="25" height="25"/>
+  <use href="#estrella" xlink:href="#estrella" x="197" y="46" width="25" height="25"/>
+  <use href="#estrella" xlink:href="#estrella" x="59" y="87" width="19" height="19"/>
+  <use href="#estrella" xlink:href="#estrella" x="222" y="87" width="19" height="19"/>
+
+  <!-- Burbujas alrededor -->
+  <g>
+    <circle cx="28" cy="122" r="9" fill="url(#gVerde)"/><use href="#reflejo" xlink:href="#reflejo" x="19" y="113" width="18" height="18"/>
+    <circle cx="272" cy="122" r="9" fill="url(#gNaranja)"/><use href="#reflejo" xlink:href="#reflejo" x="263" y="113" width="18" height="18"/>
+    <circle cx="30" cy="166" r="7" fill="url(#gNaranja)"/><use href="#reflejo" xlink:href="#reflejo" x="23" y="159" width="14" height="14"/>
+    <circle cx="270" cy="166" r="7" fill="url(#gVerde)"/><use href="#reflejo" xlink:href="#reflejo" x="263" y="159" width="14" height="14"/>
+    <circle cx="58" cy="26" r="7" fill="url(#gVerde)"/><use href="#reflejo" xlink:href="#reflejo" x="51" y="19" width="14" height="14"/>
+    <circle cx="242" cy="26" r="7" fill="url(#gNaranja)"/><use href="#reflejo" xlink:href="#reflejo" x="235" y="19" width="14" height="14"/>
+    <circle cx="26" cy="76" r="5" fill="url(#gAzul)"/><use href="#reflejo" xlink:href="#reflejo" x="21" y="71" width="10" height="10"/>
+    <circle cx="274" cy="76" r="5" fill="url(#gAzul)"/><use href="#reflejo" xlink:href="#reflejo" x="269" y="71" width="10" height="10"/>
+  </g>
+
+  <!-- Esfera verde (limón) -->
+  <circle cx="72" cy="208" r="18" fill="url(#gVerde)" stroke="#1b8a34" stroke-width="1"/>
+  <use href="#reflejo" xlink:href="#reflejo" x="54" y="190" width="36" height="36"/>
+
+  <!-- Cupcake -->
+  <g>
+    <path d="M99 198 H133 L128 226 H104 Z" fill="url(#gCapacillo)" stroke="#1d4ed8" stroke-width="1" stroke-linejoin="round"/>
+    <path d="M108 199 L110 226 M116 199 V226 M124 199 L122 226" stroke="#1d4ed8" stroke-width="1" opacity=".45"/>
+    <path d="M95 200 C89 189 99 180 107 183 C108 170 126 168 129 180 C139 178 144 191 137 200 Z"
+          fill="url(#gBetun)" stroke="#7e22ce" stroke-width="1" stroke-linejoin="round"/>
+    <ellipse cx="108" cy="186" rx="7" ry="3" fill="#fff" opacity=".6"/>
+    <circle cx="118" cy="168" r="5.5" fill="#ef4444" stroke="#b91c1c" stroke-width="1"/>
+    <circle cx="116.5" cy="166.5" r="1.8" fill="#fff" opacity=".85"/>
+    <circle cx="103" cy="194" r="1.4" fill="#facc15"/><circle cx="126" cy="190" r="1.4" fill="#22c55e"/><circle cx="117" cy="195" r="1.4" fill="#38bdf8"/>
+  </g>
+
+  <!-- Bebida -->
+  <g>
+    <path d="M178 162 L186 136 L199 133" fill="none" stroke="#f472b6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M178 162 L186 136 L199 133" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".6"/>
+    <path d="M157 168 H195 L189 226 H163 Z" fill="url(#gVaso)" stroke="#38a3d6" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="M159.5 184 H192.5 L189 224 H163 Z" fill="url(#gBebida)" opacity=".9"/>
+    <circle cx="170" cy="200" r="2.5" fill="#fff" opacity=".8"/><circle cx="180" cy="210" r="2" fill="#fff" opacity=".8"/>
+    <circle cx="175" cy="193" r="1.6" fill="#fff" opacity=".8"/><circle cx="168" cy="215" r="1.6" fill="#fff" opacity=".8"/>
+    <rect x="154" y="160" width="44" height="10" rx="5" fill="url(#gVaso)" stroke="#38a3d6" stroke-width="1.2"/>
+    <path d="M163 172 L167 220" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+  </g>
+
+  <!-- Naranja -->
+  <g>
+    <circle cx="228" cy="208" r="18" fill="url(#gNaranja)" stroke="#d9620b" stroke-width="1"/>
+    <use href="#reflejo" xlink:href="#reflejo" x="210" y="190" width="36" height="36"/>
+    <path d="M229 190 C233 182 242 181 246 184 C242 190 235 192 229 190 Z" fill="#4ade80" stroke="#15803d" stroke-width="1"/>
+  </g>
+</svg>

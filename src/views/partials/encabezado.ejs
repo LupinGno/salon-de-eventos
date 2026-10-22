@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <%- include('head') %>
+</head>
+<body class="fondo-cielo">
+<%- include('burbujas') %>
+
+<header class="navbar sticky-top navbar-dark bg-marca flex-md-nowrap p-0 shadow-sm">
+    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-6 d-flex align-items-center gap-2" href="/">
+        <i class="bi bi-balloon-heart-fill"></i> Salón de Eventos y Snacks
+    </a>
+    <div class="d-flex align-items-center gap-2 px-3">
+        <span class="text-white-50 small d-none d-sm-inline">
+            <i class="bi bi-person-circle"></i> <%= usuario.nombre %>
+        </span>
+        <span class="badge rounded-pill text-bg-light"><%= usuario.rol %></span>
+        <a href="/logout" class="btn btn-sm btn-outline-light"><i class="bi bi-box-arrow-right"></i> Salir</a>
+        <button class="btn btn-sm btn-outline-light d-md-none" type="button" data-bs-toggle="offcanvas"
+                data-bs-target="#menuLateral" aria-controls="menuLateral" aria-label="Abrir menú">
+            <i class="bi bi-list"></i>
+        </button>
+    </div>
+</header>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav class="sidebar border-end col-md-3 col-lg-2 p-0 bg-body">
+            <div class="offcanvas-md offcanvas-end bg-body" tabindex="-1" id="menuLateral" aria-labelledby="menuLateralTitulo">
+                <div class="offcanvas-header">
+                    <h5 class="offcanvas-title" id="menuLateralTitulo">Menú</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#menuLateral" aria-label="Cerrar"></button>
+                </div>
+                <div class="offcanvas-body d-md-flex flex-column p-0 pt-md-3 overflow-y-auto">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center gap-2 <%= rutaActual === '/' ? 'active' : '' %>" href="/">
+                                <i class="bi bi-house-door-fill"></i> Inicio
+                            </a>
+                        </li>
+                    </ul>
+                    <h6 class="sidebar-heading px-3 mt-4 mb-1 text-body-secondary text-uppercase">Módulos</h6>
+                    <ul class="nav flex-column mb-auto">
+                        <% menu.forEach(m => { %>
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center gap-2 <%= rutaActual.startsWith(m.ruta) ? 'active' : '' %>" href="<%= m.ruta %>">
+                                <i class="bi bi-<%= m.icono %>"></i> <%= m.titulo %>
+                                <% if (!m.listo) { %><span class="ms-auto badge text-bg-secondary fw-normal">pronto</span><% } %>
+                            </a>
+                        </li>
+                        <% }) %>
+                    </ul>
+                    <hr class="my-3">
+                    <ul class="nav flex-column mb-3">
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center gap-2" href="/logout">
+                                <i class="bi bi-door-closed"></i> Cerrar sesión
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 pb-5">

@@ -1,0 +1,48 @@
+<%- include('partials/encabezado') %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <h1 class="h3 mb-0">Consultas</h1>
+  <p class="text-body-secondary mb-0">Salones y brincolines del catálogo. Para apartar una fecha, acude a caja.</p>
+</div>
+
+<h2 class="h6 text-uppercase texto-seccion mb-2">Salones</h2>
+<div class="row g-3 mb-4">
+  <% salones.forEach(s => { %>
+  <div class="col-md-6 col-xl-4">
+    <div class="card border-0 shadow-sm h-100">
+      <% if (s.imagen) { %><img src="<%= s.imagen %>" class="card-img-top img-tarjeta" alt=""><% } %>
+      <div class="card-body">
+        <h3 class="h5 mb-1"><%= s.nombre %></h3>
+        <p class="small text-body-secondary mb-2"><%= s.descripcion || '' %></p>
+        <div class="d-flex flex-wrap gap-2 small mb-2">
+          <span class="badge text-bg-light border text-capitalize"><%= s.tamano %></span>
+          <span class="badge text-bg-light border">hasta <%= s.aforo_maximo %> personas</span>
+          <span class="badge text-bg-light border"><%= s.max_brincolines %> brincolín(es) incluido(s)</span>
+        </div>
+        <div class="small"><strong><%= f.dinero(s.precio_renta) %></strong> por evento</div>
+      </div>
+    </div>
+  </div>
+  <% }) %>
+</div>
+
+<h2 class="h6 text-uppercase texto-seccion mb-2">Brincolines</h2>
+<div class="row g-3">
+  <% brincolines.forEach(b => { %>
+  <div class="col-md-6 col-xl-4">
+    <div class="card border-0 shadow-sm h-100">
+      <% if (b.imagen) { %><img src="<%= b.imagen %>" class="card-img-top img-tarjeta" alt=""><% } %>
+      <div class="card-body">
+        <div class="d-flex justify-content-between gap-2">
+          <h3 class="h5 mb-1"><%= b.nombre %></h3>
+          <span class="badge text-bg-<%= b.estado === 'disponible' ? 'success' : 'secondary' %>"><%= ESTADOS_BRINCOLIN[b.estado] %></span>
+        </div>
+        <div class="small mb-1"><%= b.largo_m %> × <%= b.ancho_m %> m, <%= b.alto_m %> m de alto</div>
+        <div class="small"><strong><%= f.dinero(b.precio_dia) %></strong> por día</div>
+      </div>
+    </div>
+  </div>
+  <% }) %>
+</div>
+
+<%- include('partials/pie') %>

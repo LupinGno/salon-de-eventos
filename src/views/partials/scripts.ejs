@@ -1,0 +1,17 @@
+<!-- Bootstrap 5 -->
+<script src="/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<!-- SweetAlert2 para los mensajes -->
+<script src="/vendor/sweetalert2/sweetalert2.all.min.js"></script>
+<script src="/js/app.js"></script>
+<% if (typeof alerta !== 'undefined' && alerta) { %>
+<script>
+  // El mensaje viaja como JSON escapado para que no se pueda inyectar código
+  const alerta = <%- JSON.stringify(alerta).replace(/</g, '\\u003c') %>;
+  Swal.fire({
+    title: alerta.titulo,
+    text: alerta.mensaje,
+    icon: alerta.icono,
+    confirmButtonColor: '#1b9ad6'
+  })
+</script>
+<% } %>

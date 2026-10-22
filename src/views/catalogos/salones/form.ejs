@@ -1,0 +1,86 @@
+<%- include('../../partials/encabezado') %>
+<% const editar = modo === 'editar' %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <a href="/catalogos/salones" class="small link-secondary text-decoration-none"><i class="bi bi-arrow-left"></i> Salones</a>
+  <h1 class="h3 mb-0 mt-1"><%= titulo %></h1>
+</div>
+
+<%- include('../../partials/errores', { errores }) %>
+
+<form action="<%= editar ? '/catalogos/salones/' + datos.id : '/catalogos/salones' %>" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label" for="nombre">Nombre</label>
+              <input class="form-control" id="nombre" name="nombre" maxlength="80" required value="<%= datos.nombre || '' %>">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="tamano">Tamaño</label>
+              <select class="form-select" id="tamano" name="tamano" required>
+                <% TAMANOS.forEach(t => { %><option value="<%= t %>" data-max="<%= MAX_BRINCOLINES[t] %>" <%= datos.tamano === t ? 'selected' : '' %>><%= t[0].toUpperCase() + t.slice(1) %></option><% }) %>
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="aforo_maximo">Aforo máximo (personas)</label>
+              <input class="form-control" id="aforo_maximo" name="aforo_maximo" type="number" min="1" max="1000" required value="<%= datos.aforo_maximo ?? '' %>">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="max_brincolines">Brincolines incluidos</label>
+              <input class="form-control" id="max_brincolines" name="max_brincolines" type="number" min="0" max="2" required value="<%= datos.max_brincolines ?? 1 %>">
+              <div class="form-text">Chico y mediano: 1 · Grande: hasta 2.</div>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="precio_renta">Precio de renta ($)</label>
+              <input class="form-control" id="precio_renta" name="precio_renta" type="number" step="0.01" min="0" required value="<%= datos.precio_renta ?? '' %>">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="cuota_garantia">Cuota de garantía ($)</label>
+              <input class="form-control" id="cuota_garantia" name="cuota_garantia" type="number" step="0.01" min="0" required value="<%= datos.cuota_garantia ?? 0 %>">
+              <div class="form-text">Se devuelve si el salón se entrega limpio y sin daños.</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="descripcion">Descripción</label>
+              <input class="form-control" id="descripcion" name="descripcion" maxlength="255" value="<%= datos.descripcion || '' %>">
+            </div>
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="activo" name="activo" value="1" <%= Number(datos.activo) ? 'checked' : '' %>>
+                <label class="form-check-label" for="activo">Activo (se puede rentar)</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <%- include('../../partials/selector_imagen', { imagenes, seleccionada: datos.imagen_id, etiqueta: 'Foto del salón', permitirNinguna: true }) %>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h2 class="h6 text-uppercase texto-seccion mb-1">Mobiliario del salón</h2>
+          <p class="small text-body-secondary">Piezas con las que cuenta. Debe haber al menos una silla por persona del aforo.</p>
+          <% mobiliario.forEach(m => { %>
+            <div class="input-group input-group-sm mb-2">
+              <span class="input-group-text" style="min-width:150px"><%= m.nombre %></span>
+              <input name="mob_<%= m.id %>" type="number" min="0" max="5000" class="form-control" value="<%= cantidades[m.id] ?? 0 %>">
+            </div>
+          <% }) %>
+          <a href="/catalogos/salones#mobiliario" class="small">Administrar tipos de mobiliario</a>
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="/catalogos/salones" class="btn btn-outline-secondary">Cancelar</a>
+        <button class="btn btn-marca"><i class="bi bi-check-lg"></i> <%= editar ? 'Guardar cambios' : 'Crear salón' %></button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<%- include('../../partials/pie') %>

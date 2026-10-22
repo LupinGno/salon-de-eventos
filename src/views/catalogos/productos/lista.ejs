@@ -1,0 +1,83 @@
+<%- include('../../partials/encabezado') %>
+
+<div class="d-flex justify-content-between flex-wrap align-items-center pt-4 pb-2 mb-3 border-bottom gap-2">
+  <div>
+    <h1 class="h3 mb-0">Recetas</h1>
+    <p class="text-body-secondary mb-0"><%= productos.length %> producto(s). No hay combos ni descuentos: todo se vende por separado.</p>
+  </div>
+  <a href="/catalogos/productos/nuevo<%= categoriaId ? '?categoria=' + categoriaId : '' %>" class="btn btn-marca"><i class="bi bi-plus-lg"></i> Nueva receta</a>
+</div>
+
+<%- include('../_nav') %>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a href="/catalogos/productos" class="btn btn-sm <%= categoriaId ? 'btn-outline-primary' : 'btn-marca' %>">Todas</a>
+  <% categorias.forEach(c => { %>
+    <a href="/catalogos/productos?categoria=<%= c.id %>" class="btn btn-sm <%= categoriaId === c.id ? 'btn-marca' : 'btn-outline-primary' %>"><%= c.nombre %></a>
+  <% }) %>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th class="d-none d-md-table-cell">Categoría</th>
+          <th>Precio</th>
+          <th class="d-none d-lg-table-cell">Receta</th>
+          <th>Estado</th>
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!productos.length) { %>
+          <tr><td colspan="6" class="text-center text-body-secondary py-4">No hay productos en esta categoría.</td></tr>
+        <% } %>
+        <% productos.forEach(p => { %>
+        <tr>
+          <td>
+            <a href="/catalogos/productos/<%= p.id %>" class="d-flex align-items-center gap-2 text-decoration-none text-body">
+              <% if (p.imagen) { %><img src="<%= p.imagen %>" alt="" class="miniatura-tabla"><% } else { %><span class="miniatura-tabla sin-imagen"><i class="bi bi-image"></i></span><% } %>
+              <span>
+                <span class="fw-semibold"><%= p.nombre %></span>
+                <% if (p.temporada) { %><br><small class="text-body-secondary"><i class="bi bi-calendar-event"></i> <%= p.temporada %></small><% } %>
+              </span>
+            </a>
+          </td>
+          <td class="d-none d-md-table-cell"><%= p.categoria %></td>
+          <td class="text-nowrap">
+            <%= p.tamanos.length ? 'desde ' : '' %><%= f.dinero(p.precio_desde) %>
+            <% if (p.piezas_por_orden) { %><br><small class="text-body-secondary"><%= p.piezas_por_orden %> piezas</small><% } %>
+          </td>
+          <td class="d-none d-lg-table-cell small">
+            <span title="Fijos"><i class="bi bi-lock-fill"></i> <%= p.fijos.length %></span> ·
+            <span title="Móviles"><i class="bi bi-dash-circle"></i> <%= p.moviles.length %></span> ·
+            <span title="Extras"><i class="bi bi-plus-circle"></i> <%= p.extras.length %></span>
+            <% if (p.estilos.length) { %> · <%= p.estilos.length %> estilos<% } %>
+            <% if (p.tamanos.length) { %> · <%= p.tamanos.length %> tamaños<% } %>
+          </td>
+          <td>
+            <% if (p.vendible) { %><span class="badge text-bg-success">A la venta</span>
+            <% } else { %><span class="badge text-bg-secondary" title="<%= p.motivo %>"><%= p.activo ? 'No disponible' : 'Inactivo' %></span><br><small class="text-body-secondary"><%= p.motivo %></small><% } %>
+          </td>
+          <td class="text-end text-nowrap">
+            <a href="/catalogos/productos/<%= p.id %>/editar" class="btn btn-sm btn-outline-primary" title="Modificar"><i class="bi bi-pencil-square"></i></a>
+            <form action="/catalogos/productos/<%= p.id %>/estado" method="post" class="d-inline">
+              <button class="btn btn-sm <%= p.activo ? 'btn-outline-secondary' : 'btn-outline-success' %>" title="<%= p.activo ? 'Dar de baja' : 'Volver a activar' %>">
+                <i class="bi bi-<%= p.activo ? 'pause-circle' : 'play-circle' %>"></i>
+              </button>
+            </form>
+            <form action="/catalogos/productos/<%= p.id %>/eliminar" method="post" class="d-inline form-confirmar"
+                  data-titulo="¿Eliminar receta?" data-texto="Se eliminará &quot;<%= p.nombre %>&quot; con sus estilos y tamaños.">
+              <button class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="bi bi-trash3"></i></button>
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../../partials/pie') %>

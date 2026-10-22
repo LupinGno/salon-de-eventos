@@ -1,0 +1,39 @@
+<%- include('partials/encabezado') %>
+
+<div class="d-flex justify-content-between flex-wrap align-items-center pt-4 pb-2 mb-4 border-bottom">
+    <div>
+        <h1 class="h3 mb-0">Hola, <%= usuario.nombre %></h1>
+        <p class="text-body-secondary mb-0">Rol: <strong><%= usuario.rol %></strong></p>
+    </div>
+    <% if (usuario.rol === 'Administrador') { %>
+    <a href="/usuarios/nuevo" class="btn btn-marca mt-2 mt-md-0">
+        <i class="bi bi-person-plus-fill"></i> Registrar usuarios aquí
+    </a>
+    <% } %>
+</div>
+
+<h2 class="h6 text-uppercase text-body-secondary mb-3">Tus módulos</h2>
+<div class="row g-3">
+    <% menu.forEach(m => { %>
+    <div class="col-sm-6 col-xl-4">
+        <a href="<%= m.ruta %>" class="card h-100 tarjeta-modulo text-decoration-none">
+            <div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="icono-modulo"><i class="bi bi-<%= m.icono %>"></i></div>
+                    <div>
+                        <h3 class="h6 mb-1 text-body"><%= m.titulo %></h3>
+                        <p class="small text-body-secondary mb-2"><%= m.descripcion %></p>
+                        <% if (m.listo) { %>
+                            <span class="badge text-bg-success">Disponible</span>
+                        <% } else { %>
+                            <span class="badge text-bg-light border"><%= m.entrega %></span>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <% }) %>
+</div>
+
+<%- include('partials/pie') %>
