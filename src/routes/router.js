@@ -7,6 +7,8 @@ const productos = require('../controllers/productosController')
 const catalogos = require('../controllers/catalogosController')
 const rentas = require('../controllers/rentasCatalogoController')
 const api = require('../controllers/apiController')
+const cajaCtl = require('../controllers/cajaController')
+const cocinaCtl = require('../controllers/cocinaController')
 const { autenticado, permitirRoles, permitirModulo, prohibido, soloInvitados } = require('./auth')
 const { ROLES, buscarModulo } = require('./modulos')
 const { campoImagen } = require('../controllers/subidas')
@@ -22,6 +24,14 @@ const MENSAJES = {
     baja: 'El producto se dio de baja: ya no se puede vender.', alta: 'El producto volvió a estar a la venta.',
     estilo: 'Estilo guardado.', tamano: 'Tamaño guardado.', mesas: 'Mesas añadidas.', imagen: 'Imagen subida.',
     permisos: 'Permisos actualizados; aplican desde la siguiente página que abra cada usuario.',
+    'mesa-liberada': 'Mesa liberada: su cuenta quedó cerrada.',
+    cancelada: 'Cancelación aprobada. No hay reembolso.',
+    'cancelacion-solicitada': 'Solicitud enviada: un administrador debe aprobarla.',
+    'cancelacion-rechazada': 'La solicitud de cancelación se rechazó.',
+    'mesa-liberada': 'Mesa liberada: su cuenta quedó cerrada.',
+    cancelada: 'Cancelación aprobada. No hay reembolso.',
+    'cancelacion-solicitada': 'Solicitud enviada: un administrador debe aprobarla.',
+    'cancelacion-rechazada': 'La solicitud de cancelación se rechazó.',
     'no-existe': 'Ese registro no existe.', 'en-uso': 'No se puede eliminar porque ya tiene movimientos; dalo de baja.'
 }
 router.use((req, res, next) => {
@@ -34,17 +44,17 @@ router.use((req, res, next) => {
     next()
 })
 
-// Publicas
+// Públicas
 router.get('/login', soloInvitados, authController.vistaLogin)
 router.post('/login', authController.login)
 router.get('/register', soloInvitados, authController.vistaRegistro)
 router.post('/register', authController.registro)
 router.get('/logout', authController.logout)
 
-// inicio
+// Inicio 
 router.get('/', autenticado, (req, res) => res.render('index', { titulo: 'Inicio' }))
 
-// administrador
+//  usuarios
 router.get('/usuarios', soloAdmin, usuariosController.lista)
 router.get('/usuarios/nuevo', soloAdmin, usuariosController.formNuevo)
 router.post('/usuarios', soloAdmin, usuariosController.crear)
@@ -52,7 +62,7 @@ router.get('/usuarios/:id/editar', soloAdmin, usuariosController.formEditar)
 router.post('/usuarios/:id', soloAdmin, usuariosController.actualizar)
 router.post('/usuarios/:id/eliminar', soloAdmin, usuariosController.eliminar)
 
-// administrador y gerente
+// administración y catálogos
 router.get('/catalogos', catalogo, catalogos.inicio)
 
 // Recetas
@@ -117,17 +127,40 @@ router.get('/catalogos/permisos', soloAdmin, catalogos.permisos)
 router.post('/catalogos/permisos', soloAdmin, catalogos.guardarPermisos)
 router.get('/catalogos/menu', catalogo, catalogos.vistaMenu)
 
-//cliente
+//Consultas
 router.get('/consultas', autenticado, permitirModulo('consultas'), rentas.consultas)
 
-// caja
+// API para la caja 
 const apiCaja = [autenticado, permitirModulo('caja-snacks', 'catalogos')]
 router.get('/api/menu', apiCaja, api.menu)
 router.get('/api/mesas', apiCaja, api.mesas)
 router.get('/api/productos/:id', apiCaja, api.producto)
 router.post('/api/cotizar', apiCaja, api.cotizar)
 
-// modulo para proximo sprint
+// Punto de venta y comandas 
+const enCaja = [autenticado, permitirModulo('caja-snacks')]
+router.get('/caja', enCaja, cajaCtl.puntoDeVenta)
+router.post('/caja/comandas', enCaja, cajaCtl.registrar)
+router.get('/caja/comandas', enCaja, cajaCtl.comandas)
+router.get('/caja/comandas/:id', enCaja, cajaCtl.detalle)
+router.post('/caja/comandas/:id/cancelar', enCaja, cajaCtl.cancelar)
+router.get('/caja/cancelaciones', enCaja, cajaCtl.cancelaciones)
+router.post('/caja/cancelaciones/:id/aprobar', soloAdmin, cajaCtl.resolver(true))
+router.post('/caja/cancelaciones/:id/rechazar', soloAdmin, cajaCtl.resolver(false))
+router.post('/caja/cuentas/:id/cerrar', enCaja, cajaCtl.cerrarCuenta)
+router.get('/caja/tickets/:id', enCaja, cajaCtl.ticket)
+router.get('/caja/tickets/:id/pdf', enCaja, cajaCtl.ticketPdf)
+
+// Cocina y recepción 
+const enCocina = [autenticado, permitirModulo('cocina')]
+router.get('/cocina', enCocina, cocinaCtl.monitor)
+router.post('/cocina/articulos/:id/:accion', enCocina, cocinaCtl.cambiarArticulo)
+router.post('/cocina/comandas/:id/lista', enCocina, cocinaCtl.comandaLista)
+router.get('/caja/entregas', enCaja, cocinaCtl.entregas)
+router.post('/caja/articulos/:id/entregar', enCaja, cocinaCtl.entregarArticulo)
+router.post('/caja/comandas/:id/entregar', enCaja, cocinaCtl.entregarComanda)
+
+//Módulos de los siguientes sprints 
 router.get('/modulos/:clave', autenticado, (req, res, next) => {
     const modulo = buscarModulo(req.params.clave)
     if (!modulo) return next() // → 404

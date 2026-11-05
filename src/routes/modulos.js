@@ -1,4 +1,3 @@
-// Roles del sistema 
 const ROLES = {
     ADMIN: 'Administrador',
     CAJERO: 'Cajero de snacks',
@@ -9,29 +8,29 @@ const ROLES = {
     CLIENTE: 'Cliente'
 }
 
-// Módulos del sistema con roles
+
 const MODULOS = [
     {
-        clave: 'usuarios', titulo: 'Administración de usuarios', icono: 'people-fill', ruta: '/usuarios',
-        entrega: 'hecho', listo: true, soloAdmin: true,
-        descripcion: 'Crud de usuarios.'
+        clave: 'usuarios', titulo: 'Usuarios y roles', icono: 'people-fill', ruta: '/usuarios',
+        entrega: 'Sprint 0 — jueves 15 oct', listo: true, soloAdmin: true,
+        descripcion: 'Alta, modificación y baja de usuarios con su rol.'
     },
     {
         clave: 'catalogos', titulo: 'Administración y catálogos', icono: 'journal-text', ruta: '/catalogos',
-        entrega: 'hecho', listo: true,
-        descripcion: 'Crud de salones, brincolines, alimentos y bebidas, y catálogos de precios.'
+        entrega: 'Sprint 2 — jueves 22 oct', listo: true,
+        descripcion: 'Recetas, ingredientes fijos y móviles, extras, estilos, temporadas, mesas, salones, brincolines y permisos.'
     },
     {
-        clave: 'caja-snacks', titulo: 'Punto de venta', icono: 'cart-fill',
-        entrega: 'Sprint 4',
-        descripcion: 'Aun no disponible.'
+        clave: 'caja-snacks', titulo: 'Punto de venta (snacks)', icono: 'cart-fill', ruta: '/caja',
+        entrega: 'Sprint 4 ', listo: true,
+        descripcion: 'Comandas en caja, personalización de platillos, para llevar y ticket PDF.'
     },
     {
-        clave: 'cocina', titulo: 'Cocina y recepción', icono: 'fire',
-        entrega: 'Sprint 6 ',
-        descripcion: 'Aun no disponible.'
+        clave: 'cocina', titulo: 'Cocina y recepción', icono: 'fire', ruta: '/cocina',
+        entrega: 'Sprint 6 — jueves 5 nov', adelanto: true,
+        descripcion: 'Cocina en proceso de desarollo'
     },
-    {
+       {
         clave: 'salones', titulo: 'Renta de salones', icono: 'building',
         entrega: 'Sprint 8 ',
         descripcion: 'Aun no disponible.'

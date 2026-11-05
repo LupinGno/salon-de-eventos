@@ -23,7 +23,9 @@
                     <div>
                         <h3 class="h6 mb-1 text-body"><%= m.titulo %></h3>
                         <p class="small text-body-secondary mb-2"><%= m.descripcion %></p>
-                        <% if (m.listo) { %>
+                        <% if (m.adelanto) { %>
+                            <span class="badge text-bg-info">Adelanto · <%= m.entrega %></span>
+                        <% } else if (m.listo) { %>
                             <span class="badge text-bg-success">Disponible</span>
                         <% } else { %>
                             <span class="badge text-bg-light border"><%= m.entrega %></span>

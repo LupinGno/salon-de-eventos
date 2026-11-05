@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <%- include('../partials/head') %>
+</head>
+<body class="pagina-ticket">
+<%
+const medios = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' }
+const estados = { entregada: 'Entregado', pendiente: 'Pendiente (cocina)', en_preparacion: 'En preparación', lista: 'Listo para entregar', cancelada: 'CANCELADO' }
+%>
+<div class="no-imprimir text-center pt-3">
+  <button class="btn btn-marca" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+  <a class="btn btn-outline-primary" href="/caja/tickets/<%= c.ticket_id %>/pdf"><i class="bi bi-filetype-pdf"></i> Descargar PDF</a>
+  <a class="btn btn-outline-secondary" href="/caja/comandas/<%= c.id %>"><i class="bi bi-arrow-left"></i> Comanda</a>
+  <% if (aviso) { %>
+  <div class="alert alert-warning small mx-auto mt-3 text-start" style="max-width:520px" role="alert">
+    <strong>No se pudo generar el PDF con Python.</strong> <%= aviso %>
+    <div class="mt-1">Mientras tanto usa <em>Imprimir → Guardar como PDF</em>.</div>
+  </div>
+  <% } %>
+</div>
+
+<article class="ticket" aria-label="Ticket <%= c.ticket_folio %>">
+  <h1>Salón de Eventos y Snacks</h1>
+  <div class="centro"><em>El futuro que se te prometió</em></div>
+  <hr>
+  <div class="fila"><strong>Ticket No. <%= c.ticket_folio %></strong><strong>Comanda No. <%= c.folio %></strong></div>
+  <div><%= c.caja %> (No. <%= c.caja_numero %>)</div>
+  <div>Fecha: <%= f.fechaCorta(c.creada_en) %></div>
+  <div>Atendió: <%= c.atendio %></div>
+  <div class="grande"><%= c.para_llevar ? 'PARA LLEVAR' : `Mesa ${c.mesa}` %></div>
+  <div>Cliente: <%= c.cliente_nombre %></div>
+  <hr>
+  <% c.grupos.forEach(g => { %>
+    <div class="fila <%= g.estado === 'cancelada' ? 'tachado' : '' %>"><strong><%= g.cantidad %> x <%= g.descripcion %></strong><span><%= f.dinero(g.importe) %></span></div>
+    <% if (g.piezas) { %><div class="sub"><%= g.piezas %> piezas por orden</div><% } %>
+    <% g.quitar.forEach(m => { %><div class="sub">Sin <%= m.nombre %></div><% }) %>
+    <% g.extras.forEach(m => { %><div class="sub fila"><span>Extra <%= m.nombre %></span><span>+<%= f.dinero(m.precio) %> c/u</span></div><% }) %>
+    <div class="sub">Estado: <%= estados[g.estado] %></div>
+  <% }) %>
+  <hr>
+  <div class="fila grande"><span>TOTAL</span><span><%= f.dinero(c.total) %></span></div>
+  <div>Pago: <%= medios[c.medio_pago] %></div>
+  <% if (c.medio_pago === 'efectivo') { %>
+    <div class="fila"><span>Recibido</span><span><%= f.dinero(c.recibido) %></span></div>
+    <div class="fila"><strong>Cambio</strong><strong><%= f.dinero(c.cambio) %></strong></div>
+  <% } else if (c.referencia) { %>
+    <div>Referencia: <%= c.referencia %></div>
+  <% } %>
+  <% if (c.cuenta.length > 1) { %>
+    <hr>
+    <div class="fila"><strong>Cuenta de la mesa (<%= c.cuenta.length %> comandas)</strong><strong><%= f.dinero(c.cuenta_total) %></strong></div>
+  <% } %>
+  <% if (c.estado === 'cancelada') { %><div class="centro"><strong>COMANDA CANCELADA — sin reembolso</strong></div><% } %>
+  <hr>
+  <div class="centro small">Pagado al ordenar. Los alimentos no tienen reembolso.</div>
+  <div class="centro">¡Gracias por tu visita!</div>
+</article>
+
+<script src="/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

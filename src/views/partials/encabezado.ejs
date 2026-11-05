@@ -45,7 +45,7 @@
                         <li class="nav-item">
                             <a class="nav-link d-flex align-items-center gap-2 <%= rutaActual.startsWith(m.ruta) ? 'active' : '' %>" href="<%= m.ruta %>">
                                 <i class="bi bi-<%= m.icono %>"></i> <%= m.titulo %>
-                                <% if (!m.listo) { %><span class="ms-auto badge text-bg-secondary fw-normal">pronto</span><% } %>
+                                <% if (m.adelanto) { %><span class="ms-auto badge text-bg-info fw-normal">adelanto</span><% } else if (!m.listo) { %><span class="ms-auto badge text-bg-secondary fw-normal">pronto</span><% } %>
                             </a>
                         </li>
                         <% }) %>

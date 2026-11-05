@@ -1,0 +1,17 @@
+<%- include('../partials/encabezado') %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1 class="h3 mb-0">Para entregar</h1>
+    <p class="text-body-secondary mb-0">Lo que cocina ya terminó. Llévalo a la mesa (o empácalo si es para llevar) y márcalo como entregado.</p>
+  </div>
+  <span class="small text-body-secondary" id="actualizado" aria-live="polite"></span>
+</div>
+
+<%- include('_nav') %>
+
+<div class="row g-3" id="cola" data-autorefresh="/caja/entregas?parcial=1">
+  <%- include('_entregas', { comandas }) %>
+</div>
+
+<%- include('../partials/pie', { scriptsExtra: ['/js/cocina.js'] }) %>

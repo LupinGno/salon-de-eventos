@@ -1,5 +1,4 @@
-// Reglas del menú que no dependen de la pantalla 
-
+// reglas de negocio para el menú y la cotización de artículos
 const conexion = require('../database/db')
 
 class ErrorNegocio extends Error {
@@ -21,7 +20,7 @@ const SQL_PRODUCTO = `
       LEFT JOIN imagenes i ON i.id = p.imagen_id
       LEFT JOIN temporadas t ON t.id = p.temporada_id`
 
-// verifica si un producto se puede vened
+// ¿Se puede vender HOY? 
 function estadoProducto(p) {
     const hoy = p.hoy
     if (!p.activo) {
@@ -84,7 +83,7 @@ async function menuCompleto() {
     return detalles
 }
 
-// validacion y calculo de precio 
+//  valida un artículo como lo mandaría la caja y calcula su precio
 async function cotizar(item) {
     const id = Number(item.producto_id)
     if (!Number.isInteger(id) || id <= 0) throw new ErrorNegocio('Falta el producto.', 422)
@@ -94,12 +93,14 @@ async function cotizar(item) {
     if (!p.vendible) throw new ErrorNegocio(`"${p.nombre}" no se puede vender: ${p.motivo}.`, 409)
 
     const desglose = []
-    let precio
+    const modificaciones = []   // para guardar en articulo_modificaciones 
+    let precio, tamanoElegido = null, estiloElegido = null
 
     // Tamaño
     if (p.tamanos.length) {
         const tamano = p.tamanos.find(t => t.id === Number(item.tamano_id))
         if (!tamano) throw new ErrorNegocio(`Elige un tamaño válido para "${p.nombre}".`, 422)
+        tamanoElegido = tamano
         precio = tamano.precio
         desglose.push({ concepto: `${p.nombre} ${tamano.nombre}`, importe: tamano.precio })
     } else {
@@ -113,6 +114,7 @@ async function cotizar(item) {
         const estilo = p.estilos.find(e => e.id === Number(item.estilo_id))
         if (!estilo) throw new ErrorNegocio(`Elige un estilo para "${p.nombre}".`, 422)
         if (!estilo.disponible) throw new ErrorNegocio(`El estilo "${estilo.nombre}" no está disponible hoy.`, 409)
+        estiloElegido = estilo
         if (estilo.precio_extra > 0) {
             precio += estilo.precio_extra
             desglose.push({ concepto: `Estilo ${estilo.nombre}`, importe: estilo.precio_extra })
@@ -122,7 +124,7 @@ async function cotizar(item) {
     }
 
     // Quitar ingredientes
-    const quitar = (item.quitar || []).map(Number)
+    const quitar = [...new Set((item.quitar || []).map(Number))]
     for (const ingId of quitar) {
         if (!p.permite_quitar) throw new ErrorNegocio(`En ${p.categoria} no se pueden quitar ingredientes.`, 422)
         const fijo = p.fijos.find(f => f.id === ingId)
@@ -130,18 +132,29 @@ async function cotizar(item) {
         const movil = p.moviles.find(m => m.id === ingId)
         if (!movil) throw new ErrorNegocio(`Ese ingrediente no forma parte de ${p.nombre}.`, 422)
         desglose.push({ concepto: `Sin ${movil.nombre}`, importe: 0 })
+        modificaciones.push({ ingrediente_id: movil.id, tipo: 'quitar', nombre: movil.nombre, precio: 0 })
     }
 
     // Extras
-    const extras = (item.extras || []).map(Number)
+    const extras = [...new Set((item.extras || []).map(Number))]
     for (const ingId of extras) {
         const extra = p.extras.find(e => e.id === ingId)
         if (!extra) throw new ErrorNegocio(`Ese extra no está disponible para ${p.nombre}.`, 422)
         precio += extra.precio
         desglose.push({ concepto: `Extra ${extra.nombre}`, importe: extra.precio })
+        modificaciones.push({ ingrediente_id: extra.id, tipo: 'extra', nombre: extra.nombre, precio: extra.precio })
     }
 
+    // Nombre como se vende
+    const descripcion = [p.nombre + (tamanoElegido ? ` ${tamanoElegido.nombre}` : ''), estiloElegido && estiloElegido.nombre]
+        .filter(Boolean).join(' · ')
+
     return {
+        producto_id: p.id,
+        estilo_id: estiloElegido ? estiloElegido.id : null,
+        tamano_id: tamanoElegido ? tamanoElegido.id : null,
+        descripcion,
+        modificaciones,
         producto: p.nombre,
         piezas: p.piezas_por_orden,
         va_a_cocina: Boolean(p.requiere_preparacion),

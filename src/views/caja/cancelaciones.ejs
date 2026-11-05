@@ -1,0 +1,48 @@
+<%- include('../partials/encabezado') %>
+<% const pendientes = cancelaciones.filter(k => k.estado === 'solicitada') %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <h1 class="h3 mb-0">Cancelaciones</h1>
+  <p class="text-body-secondary mb-0">Sin reembolso. Caja las solicita desde el detalle de la comanda y un administrador las aprueba. <strong><%= pendientes.length %></strong> por resolver.</p>
+</div>
+
+<%- include('_nav') %>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Comanda</th><th>Qué</th><th class="text-end">Monto</th><th>Motivo</th><th>Pidió</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        <% if (!cancelaciones.length) { %><tr><td colspan="7" class="text-body-secondary">No hay cancelaciones.</td></tr><% } %>
+        <% cancelaciones.forEach(k => { %>
+        <tr>
+          <td><a href="/caja/comandas/<%= k.comanda_id %>" class="link-marca fw-semibold">#<%= k.folio %></a></td>
+          <td><%= k.articulo || 'Toda la comanda' %></td>
+          <td class="text-end"><%= f.dinero(k.monto) %></td>
+          <td class="small"><%= k.motivo %></td>
+          <td class="small"><%= k.solicito %><div class="text-body-secondary"><%= f.fechaCorta(k.solicitada_en) %></div></td>
+          <td>
+            <span class="badge <%= k.estado === 'aprobada' ? 'estado-cancelada' : k.estado === 'rechazada' ? 'text-bg-secondary' : 'estado-pendiente' %>"><%= k.estado %></span>
+            <% if (k.autorizo) { %><div class="small text-body-secondary"><%= k.autorizo %></div><% } %>
+          </td>
+          <td class="text-end text-nowrap">
+            <% if (k.estado === 'solicitada' && esAdmin) { %>
+              <form method="post" class="d-inline form-confirmar" action="/caja/cancelaciones/<%= k.id %>/aprobar"
+                    data-titulo="¿Aprobar la cancelación?" data-texto="Se cancela sin reembolso: <%= f.dinero(k.monto) %>.">
+                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-check-lg"></i> Aprobar</button>
+              </form>
+              <form method="post" class="d-inline" action="/caja/cancelaciones/<%= k.id %>/rechazar">
+                <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i> Rechazar</button>
+              </form>
+            <% } else if (k.estado === 'solicitada') { %>
+              <span class="small text-body-secondary">Espera al administrador</span>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/pie') %>

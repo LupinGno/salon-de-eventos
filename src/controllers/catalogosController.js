@@ -240,7 +240,7 @@ exports.guardarPermisos = async (req, res, next) => {
     } finally { conn.release() }
 }
 
-//vista del menú como cajero
+//vista del menú como cajero 
 exports.vistaMenu = async (req, res, next) => {
     try {
         const productos = await menu.menuCompleto()

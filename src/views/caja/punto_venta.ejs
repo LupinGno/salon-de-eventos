@@ -1,0 +1,190 @@
+<%- include('../partials/encabezado') %>
+<% const categorias = [...new Set(productos.map(p => p.categoria))] %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1 class="h3 mb-0">Punto de venta</h1>
+    <p class="text-body-secondary mb-0">Todo se pide y se paga aquí; el pedido se lleva a la mesa. <span class="text-nowrap"><i class="bi bi-cash-coin"></i> <%= cajaActual.nombre %></span></p>
+  </div>
+</div>
+
+<%- include('_nav') %>
+
+<div class="row g-4">
+  <!-- ===== Menú ===== -->
+  <div class="col-xl-8">
+    <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+      <nav class="nav nav-pills nav-catalogo gap-1 flex-nowrap overflow-auto pb-1" id="filtro-categorias" aria-label="Categorías">
+        <button type="button" class="nav-link active" data-categoria="">Todo</button>
+        <% categorias.forEach(cat => { %><button type="button" class="nav-link text-nowrap" data-categoria="<%= cat %>"><%= cat %></button><% }) %>
+      </nav>
+      <input type="search" id="buscar-producto" class="form-control form-control-sm ms-auto" style="max-width:220px" placeholder="Buscar…" aria-label="Buscar producto">
+    </div>
+
+    <% if (!productos.length) { %>
+      <div class="alert alert-warning">No hay productos a la venta hoy. Revisa <a href="/catalogos/menu">la vista del menú</a>.</div>
+    <% } %>
+
+    <div class="row g-3" id="rejilla-productos">
+      <% productos.forEach(p => { %>
+      <div class="col-6 col-md-4 col-xxl-3" data-producto-tarjeta data-categoria="<%= p.categoria %>" data-nombre="<%= p.nombre.toLowerCase() %>">
+        <button type="button" class="card tarjeta-pos border-0 shadow-sm h-100 w-100 text-start p-0" data-abrir-producto="<%= p.id %>">
+          <% if (p.imagen) { %><img src="<%= p.imagen %>" alt="" class="img-pos"><% } else { %><div class="img-pos sin-imagen d-grid place-items-center"><i class="bi bi-image"></i></div><% } %>
+          <span class="card-body p-2 d-block">
+            <span class="d-block fw-semibold lh-sm"><%= p.nombre %></span>
+            <span class="d-flex justify-content-between align-items-center mt-1 small">
+              <span class="fw-semibold"><%= p.tamanos.length || p.estilos.some(e => e.precio_extra > 0) ? 'desde ' : '' %><%= f.dinero(p.precio_desde) %></span>
+              <% if (p.va_a_cocina) { %><span class="badge text-bg-warning-subtle border border-warning-subtle text-warning-emphasis" title="Se prepara en cocina"><i class="bi bi-fire"></i></span>
+              <% } else { %><span class="badge text-bg-success-subtle border border-success-subtle text-success-emphasis" title="Se entrega al momento"><i class="bi bi-lightning-fill"></i></span><% } %>
+            </span>
+          </span>
+        </button>
+      </div>
+      <% }) %>
+    </div>
+
+    <!-- Mesas con cuenta abierta (US-27) -->
+    <h2 class="h6 text-uppercase texto-seccion mt-4 mb-2">Mesas ocupadas</h2>
+    <div class="card border-0 shadow-sm">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Mesa</th><th>Cliente</th><th class="text-end">Comandas</th><th class="text-end">Cuenta</th><th class="text-end">Por entregar</th><th></th></tr></thead>
+          <tbody>
+            <% if (!cuentas.length) { %><tr><td colspan="6" class="text-body-secondary">Todas las mesas están libres.</td></tr><% } %>
+            <% cuentas.forEach(c => { %>
+            <tr>
+              <td class="fw-semibold">Mesa <%= c.mesa %></td>
+              <td><%= c.cliente_nombre %></td>
+              <td class="text-end"><%= c.comandas %></td>
+              <td class="text-end"><%= f.dinero(c.total) %></td>
+              <td class="text-end"><% if (c.pendientes > 0) { %><span class="badge text-bg-warning"><%= c.pendientes %></span><% } else { %><span class="text-body-secondary">—</span><% } %></td>
+              <td class="text-end">
+                <form action="/caja/cuentas/<%= c.id %>/cerrar" method="post" class="d-inline form-confirmar"
+                      data-titulo="¿Liberar la mesa <%= c.mesa %>?" data-texto="Se cierra la cuenta de <%= c.cliente_nombre %>. El siguiente pedido para esa mesa abrirá una cuenta nueva.">
+                  <button class="btn btn-sm btn-outline-primary"><i class="bi bi-door-open"></i> Liberar</button>
+                </form>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Pedido ===== -->
+  <div class="col-xl-4">
+    <div class="card border-0 shadow-sm sticky-xl-top" style="top:64px">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-bag"></i> Pedido</h2>
+
+        <div class="btn-group w-100 mb-2" role="group" aria-label="Dónde come">
+          <input type="radio" class="btn-check" name="destino" id="destino-mesa" value="mesa" checked>
+          <label class="btn btn-outline-primary" for="destino-mesa"><i class="bi bi-grid-3x3-gap"></i> En mesa</label>
+          <input type="radio" class="btn-check" name="destino" id="destino-llevar" value="llevar">
+          <label class="btn btn-outline-primary" for="destino-llevar"><i class="bi bi-bag-check"></i> Para llevar</label>
+        </div>
+
+        <div id="campo-mesa" class="mb-2">
+          <label class="form-label small mb-0" for="mesa">Mesa</label>
+          <select id="mesa" class="form-select">
+            <option value="">Elige la mesa…</option>
+            <% mesas.forEach(m => { const c = cuentas.find(x => x.mesa_id === m.id) %>
+              <option value="<%= m.id %>"><%= `Mesa ${m.numero}` %><%= c ? ` · ocupada (${c.cliente_nombre})` : '' %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div id="aviso-cuenta" class="alert alert-info small py-2 d-none" role="status"></div>
+
+        <label class="form-label small mb-0" for="cliente">Nombre del cliente</label>
+        <input id="cliente" class="form-control mb-3" maxlength="80" autocomplete="off" placeholder="Para encontrarlo si cambia de mesa">
+
+        <ul class="list-group list-group-flush mb-2" id="lineas-pedido">
+          <li class="list-group-item bg-transparent text-body-secondary px-0" id="pedido-vacio">Toca un producto del menú para agregarlo.</li>
+        </ul>
+
+        <div class="d-flex justify-content-between align-items-baseline border-top pt-2">
+          <span class="fw-semibold">Total</span>
+          <span class="fs-4 fw-bold" id="total-pedido">$0.00</span>
+        </div>
+        <div class="small text-body-secondary mb-3" id="resumen-cocina"></div>
+
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-danger" id="vaciar-pedido" disabled title="Vaciar pedido"><i class="bi bi-trash"></i></button>
+          <button type="button" class="btn btn-marca flex-grow-1" id="cobrar" disabled><i class="bi bi-cash-coin"></i> Cobrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: armar el platillo (US-22 a US-26) ===== -->
+<div class="modal fade" id="modal-producto" tabindex="-1" aria-labelledby="modal-producto-titulo" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <img id="modal-producto-imagen" src="" alt="" class="img-menu me-3 d-none">
+        <div>
+          <h2 class="modal-title h5" id="modal-producto-titulo"></h2>
+          <div class="small text-body-secondary" id="modal-producto-info"></div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body" id="unidades"></div>
+      <div class="modal-footer justify-content-between">
+        <button type="button" class="btn btn-outline-primary" id="otra-unidad"><i class="bi bi-plus-lg"></i> <span>Agregar otra con cambios distintos</span></button>
+        <div class="d-flex align-items-center gap-3">
+          <span class="fw-semibold fs-5" id="total-modal">$0.00</span>
+          <button type="button" class="btn btn-marca" id="agregar-al-pedido"><i class="bi bi-cart-plus"></i> Agregar al pedido</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: cobrar (US-31) ===== -->
+<div class="modal fade" id="modal-cobro" tabindex="-1" aria-labelledby="modal-cobro-titulo" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="modal-cobro-titulo"><i class="bi bi-cash-coin"></i> Cobrar</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center mb-3">
+          <div class="small text-body-secondary" id="cobro-destino"></div>
+          <div class="display-6 fw-bold" id="cobro-total">$0.00</div>
+        </div>
+        <div class="btn-group w-100 mb-3" role="group" aria-label="Medio de pago">
+          <input type="radio" class="btn-check" name="medio" id="medio-efectivo" value="efectivo" checked>
+          <label class="btn btn-outline-primary" for="medio-efectivo"><i class="bi bi-cash"></i> Efectivo</label>
+          <input type="radio" class="btn-check" name="medio" id="medio-tarjeta" value="tarjeta">
+          <label class="btn btn-outline-primary" for="medio-tarjeta"><i class="bi bi-credit-card"></i> Tarjeta</label>
+          <input type="radio" class="btn-check" name="medio" id="medio-transferencia" value="transferencia">
+          <label class="btn btn-outline-primary" for="medio-transferencia"><i class="bi bi-bank"></i> Transferencia</label>
+        </div>
+        <div id="campos-efectivo">
+          <label class="form-label small mb-0" for="recibido">Recibido</label>
+          <div class="input-group mb-2">
+            <span class="input-group-text">$</span>
+            <input id="recibido" type="number" min="0" step="0.5" class="form-control form-control-lg" inputmode="decimal">
+          </div>
+          <div class="d-flex flex-wrap gap-1 mb-3" id="billetes"></div>
+          <div class="d-flex justify-content-between fs-5"><span>Cambio</span><span class="fw-bold" id="cambio">$0.00</span></div>
+        </div>
+        <div id="campos-referencia" class="d-none">
+          <label class="form-label small mb-0" for="referencia">Referencia (opcional)</label>
+          <input id="referencia" class="form-control" maxlength="60" placeholder="Autorización de la terminal o folio de la transferencia">
+        </div>
+        <div class="alert alert-danger small mt-3 mb-0 d-none" id="error-cobro" role="alert"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Volver</button>
+        <button type="button" class="btn btn-marca" id="confirmar-cobro"><i class="bi bi-check2-circle"></i> Cobrar y enviar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="application/json" id="datos-caja"><%- JSON.stringify({ productos, cuentas }).replace(/</g, '\\u003c') %></script>
+<%- include('../partials/pie', { scriptsExtra: ['/js/caja.js'] }) %>

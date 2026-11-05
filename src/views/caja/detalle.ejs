@@ -1,0 +1,134 @@
+<%- include('../partials/encabezado') %>
+<%
+const medios = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' }
+const estados = { entregada: 'Entregado', pendiente: 'Pendiente (cocina)', en_preparacion: 'En preparación', lista: 'Listo para entregar', cancelada: 'Cancelado' }
+const vivos = c.articulos.filter(a => a.estado !== 'cancelada')
+%>
+
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1 class="h3 mb-0">Comanda #<%= c.folio %> <% if (c.estado === 'cancelada') { %><span class="badge estado-cancelada fs-6 align-middle">Cancelada</span><% } %></h1>
+    <p class="text-body-secondary mb-0">
+      <%= c.para_llevar ? 'Para llevar' : `Mesa ${c.mesa}` %> · <%= c.cliente_nombre %> · <%= f.fechaCorta(c.creada_en) %> · Atendió <%= c.atendio %>
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="/caja/tickets/<%= c.ticket_id %>" target="_blank" class="btn btn-outline-primary"><i class="bi bi-printer"></i> Ticket #<%= c.ticket_folio %></a>
+    <a href="/caja/tickets/<%= c.ticket_id %>/pdf" target="_blank" class="btn btn-outline-primary"><i class="bi bi-filetype-pdf"></i> PDF</a>
+  </div>
+</div>
+
+<%- include('_nav') %>
+<%- include('../partials/errores', { errores }) %>
+
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Artículos (uno por unidad)</h2>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead><tr><th>#</th><th>Artículo</th><th>Cambios</th><th>Estado</th><th class="text-end">Precio</th></tr></thead>
+            <tbody>
+              <% c.articulos.forEach((a, i) => { %>
+              <tr>
+                <td class="text-body-secondary"><%= i + 1 %></td>
+                <td class="<%= a.estado === 'cancelada' ? 'text-decoration-line-through text-body-secondary' : '' %>">
+                  <span class="fw-semibold"><%= a.descripcion %></span>
+                  <% if (a.piezas) { %><div class="small text-body-secondary"><%= a.piezas %> piezas</div><% } %>
+                </td>
+                <td class="small">
+                  <% a.quitar.forEach(m => { %><div class="text-danger-emphasis">Sin <%= m.nombre %></div><% }) %>
+                  <% a.extras.forEach(m => { %><div class="text-success-emphasis">+ <%= m.nombre %> <%= f.dinero(m.precio) %></div><% }) %>
+                  <% if (!a.quitar.length && !a.extras.length) { %><span class="text-body-secondary">Con todo</span><% } %>
+                </td>
+                <td><span class="badge estado-<%= a.estado %>"><%= estados[a.estado] %></span>
+                  <% if (a.entregado_en) { %><div class="small text-body-secondary"><%= String(a.entregado_en).slice(11, 16) %></div><% } %></td>
+                <td class="text-end"><%= f.dinero(a.precio_unitario) %></td>
+              </tr>
+              <% }) %>
+            </tbody>
+            <tfoot>
+              <tr><th colspan="4" class="text-end">Total cobrado</th><th class="text-end fs-5"><%= f.dinero(c.total) %></th></tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- US-30: cancelación sin reembolso -->
+    <div class="card border-0 shadow-sm mt-4">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-1">Cancelar</h2>
+        <p class="small text-body-secondary">La comida ya pagada <strong>no se reembolsa</strong>. La cancelación la aprueba un administrador y queda registrada con su motivo.</p>
+        <% if (c.estado === 'cancelada' || !vivos.length) { %>
+          <p class="mb-0 text-body-secondary">No hay nada por cancelar.</p>
+        <% } else { %>
+        <form action="/caja/comandas/<%= c.id %>/cancelar" method="post" class="row g-2 needs-validation" novalidate>
+          <div class="col-md-5">
+            <label class="form-label small mb-0" for="articulo_id">Qué se cancela</label>
+            <select id="articulo_id" name="articulo_id" class="form-select">
+              <option value="">Toda la comanda (<%= f.dinero(vivos.reduce((s, a) => s + a.precio_unitario, 0)) %>)</option>
+              <% vivos.forEach((a, i) => { %><option value="<%= a.id %>"><%= a.descripcion %><%= a.quitar.length || a.extras.length ? ' (con cambios)' : '' %> — <%= f.dinero(a.precio_unitario) %></option><% }) %>
+            </select>
+          </div>
+          <div class="col-md-7">
+            <label class="form-label small mb-0" for="motivo">Motivo</label>
+            <input id="motivo" name="motivo" class="form-control" minlength="5" maxlength="255" required placeholder="Ej. el cliente se equivocó de sabor">
+            <div class="invalid-feedback">Escribe el motivo (mínimo 5 letras).</div>
+          </div>
+          <div class="col-12">
+            <button class="btn btn-outline-danger"><i class="bi bi-x-octagon"></i> <%= esAdmin ? 'Cancelar (sin reembolso)' : 'Solicitar cancelación' %></button>
+          </div>
+        </form>
+        <% } %>
+        <% if (c.cancelaciones.length) { %>
+        <ul class="list-group list-group-flush mt-3">
+          <% c.cancelaciones.forEach(k => { %>
+          <li class="list-group-item bg-transparent px-0 small">
+            <span class="badge <%= k.estado === 'aprobada' ? 'estado-cancelada' : k.estado === 'rechazada' ? 'text-bg-secondary' : 'estado-pendiente' %>"><%= k.estado %></span>
+            <%= k.articulo || 'Toda la comanda' %> · <%= f.dinero(k.monto) %> · “<%= k.motivo %>” · pidió <%= k.solicito %><%= k.autorizo ? ` · resolvió ${k.autorizo}` : '' %>
+          </li>
+          <% }) %>
+        </ul>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Cobro</h2>
+        <div class="d-flex justify-content-between"><span>Total</span><strong><%= f.dinero(c.total) %></strong></div>
+        <div class="d-flex justify-content-between"><span>Pago</span><span><%= medios[c.medio_pago] %></span></div>
+        <% if (c.medio_pago === 'efectivo') { %>
+          <div class="d-flex justify-content-between"><span>Recibido</span><span><%= f.dinero(c.recibido) %></span></div>
+          <div class="d-flex justify-content-between"><span>Cambio</span><span><%= f.dinero(c.cambio) %></span></div>
+        <% } else if (c.referencia) { %>
+          <div class="d-flex justify-content-between"><span>Referencia</span><span><%= c.referencia %></span></div>
+        <% } %>
+        <div class="d-flex justify-content-between small text-body-secondary mt-2"><span>Caja</span><span><%= c.caja %></span></div>
+      </div>
+    </div>
+
+    <!-- US-27: cuenta de la mesa -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-1"><%= c.para_llevar ? 'Pedido para llevar' : `Cuenta de la mesa ${c.mesa}` %></h2>
+        <p class="small text-body-secondary mb-2"><%= c.para_llevar ? 'Los pedidos para llevar no ocupan mesa.' : (c.cuenta_estado === 'abierta' ? 'Cuenta abierta: si vuelven a pedir, se suma aquí.' : 'Cuenta cerrada: la mesa ya se liberó.') %></p>
+        <ul class="list-group list-group-flush">
+          <% c.cuenta.forEach(x => { %>
+          <li class="list-group-item bg-transparent px-0 d-flex justify-content-between">
+            <a href="/caja/comandas/<%= x.id %>" class="link-marca <%= x.id === c.id ? 'fw-bold' : '' %>">#<%= x.folio %></a>
+            <span class="<%= x.estado === 'cancelada' ? 'text-decoration-line-through' : '' %>"><%= f.dinero(x.total) %></span>
+          </li>
+          <% }) %>
+        </ul>
+        <div class="d-flex justify-content-between fw-semibold border-top pt-2"><span>Total de la cuenta</span><span><%= f.dinero(c.cuenta_total) %></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/pie') %>

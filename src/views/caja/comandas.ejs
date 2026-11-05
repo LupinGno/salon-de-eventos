@@ -1,0 +1,71 @@
+<%- include('../partials/encabezado') %>
+<% const medios = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' } %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1 class="h3 mb-0">Comandas del día</h1>
+    <p class="text-body-secondary mb-0"><%= f.fechaCorta(dia) %><%= dia === hoy ? ' (hoy)' : '' %> · <%= comandas.length %> comanda(s)</p>
+  </div>
+  <form class="d-flex gap-2 align-items-end" method="get" action="/caja/comandas">
+    <div>
+      <label for="fecha" class="form-label small mb-0">Día</label>
+      <input type="date" id="fecha" name="fecha" value="<%= dia %>" max="<%= hoy %>" class="form-control form-control-sm">
+    </div>
+    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i> Ver</button>
+  </form>
+</div>
+
+<%- include('_nav') %>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100"><div class="card-body">
+      <div class="small text-body-secondary">Vendido</div><div class="fs-4 fw-bold"><%= f.dinero(resumen.total) %></div>
+    </div></div>
+  </div>
+  <% resumen.porMedio.forEach(m => { %>
+  <div class="col-6 col-lg-2">
+    <div class="card border-0 shadow-sm h-100"><div class="card-body">
+      <div class="small text-body-secondary"><%= medios[m.medio] %></div><div class="fs-5 fw-semibold"><%= f.dinero(m.total) %></div>
+    </div></div>
+  </div>
+  <% }) %>
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100"><div class="card-body">
+      <div class="small text-body-secondary">Artículos por entregar</div><div class="fs-4 fw-bold"><%= resumen.pendientes %></div>
+    </div></div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead><tr><th>Comanda</th><th>Hora</th><th>Mesa</th><th>Cliente</th><th class="text-end">Artículos</th><th class="text-end">Total</th><th>Pago</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        <% if (!comandas.length) { %><tr><td colspan="9" class="text-body-secondary">No hay comandas este día.</td></tr><% } %>
+        <% comandas.forEach(c => { %>
+        <tr>
+          <td class="fw-semibold"><a href="/caja/comandas/<%= c.id %>" class="link-marca">#<%= c.folio %></a></td>
+          <td><%= String(c.creada_en).slice(11, 16) %></td>
+          <td><%= c.para_llevar ? 'Para llevar' : `Mesa ${c.mesa}` %></td>
+          <td><%= c.cliente_nombre %></td>
+          <td class="text-end"><%= c.unidades %><% if (Number(c.pendientes) > 0) { %> <span class="badge estado-pendiente" title="Por entregar"><%= c.pendientes %> pend.</span><% } %></td>
+          <td class="text-end"><%= f.dinero(c.total) %></td>
+          <td><%= medios[c.medio_pago] %></td>
+          <td>
+            <% if (c.estado === 'cancelada') { %><span class="badge estado-cancelada">Cancelada</span>
+            <% } else if (Number(c.canceladas) > 0) { %><span class="badge text-bg-light border">Pagada · <%= c.canceladas %> cancel.</span>
+            <% } else { %><span class="badge estado-entregada">Pagada</span><% } %>
+          </td>
+          <td class="text-end text-nowrap">
+            <a href="/caja/comandas/<%= c.id %>" class="btn btn-sm btn-outline-primary" title="Ver detalle"><i class="bi bi-eye"></i></a>
+            <% if (c.ticket_id) { %><a href="/caja/tickets/<%= c.ticket_id %>" target="_blank" class="btn btn-sm btn-outline-primary" title="Ticket"><i class="bi bi-printer"></i></a><% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/pie') %>
