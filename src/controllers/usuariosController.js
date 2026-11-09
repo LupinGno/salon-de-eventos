@@ -1,4 +1,4 @@
-//El administrador registra, modifica y elimina usuarios
+//Administrador
 const bcryptjs = require('bcryptjs')
 const conexion = require('../database/db')
 const { validarUsuario } = require('./validaciones')
@@ -26,7 +26,7 @@ async function obtenerUsuario(id) {
     return filas[0]
 }
 
-// ¿Cuántos administradores activos quedan sin contar a este usuario?
+//Ver cuantos administradores activos hay, excluyendo al que se está editando o eliminando
 async function otrosAdminsActivos(idExcluido) {
     const [[{ total }]] = await conexion.query(
         `SELECT COUNT(*) AS total FROM usuarios u JOIN roles r ON r.id = u.rol_id

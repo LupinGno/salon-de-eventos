@@ -7,7 +7,7 @@ const { NOMBRE_COOKIE, opcionesCookie } = require('../routes/auth')
 const ROL_CLIENTE = 'Cliente'
 const COSTO_BCRYPT = 10
 
-// Hash de relleno: si el usuario no existe se compara contra este
+// si el usuario no existe se compara contra este
 const HASH_RELLENO = bcryptjs.hashSync('relleno-no-es-una-contraseña', COSTO_BCRYPT)
 
 // Bloqueo temporal por intentos fallidos de login

@@ -46,10 +46,9 @@
         quitar: new Set(), extras: new Set()
     })
 
-    //Modal para armar el platillo
     const modalProducto = new bootstrap.Modal($('modal-producto'))
-    let actual = null          
-    let unidades = []         
+    let actual = null        
+    let unidades = []          
 
     document.addEventListener('click', e => {
         const b = e.target.closest('[data-abrir-producto]')
@@ -133,7 +132,7 @@
         $('unidades').lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     })
 
-    //Pedido 
+    //Pedido
     let pedido = []
     let siguiente = 1
 
@@ -200,7 +199,7 @@
     })
     $('vaciar-pedido').addEventListener('click', () => { pedido = []; dibujarPedido() })
 
-    // Mesa o para llevar; cuenta abierta
+    //Mesa o para llevar
     const paraLlevar = () => $('destino-llevar').checked
     function revisarDestino() {
         $('campo-mesa').classList.toggle('d-none', paraLlevar())
