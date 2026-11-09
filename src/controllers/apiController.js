@@ -17,7 +17,7 @@ exports.menu = async (req, res, next) => {
     } catch (e) { next(e) }
 }
 
-// la caja lee las mesas activas en cada pedido, sin reiniciar nada
+// la caja lee las mesas activas
 exports.mesas = async (req, res, next) => {
     try {
         const [mesas] = await conexion.query('SELECT id, numero, capacidad FROM mesas WHERE activo = 1 ORDER BY numero')
@@ -25,7 +25,7 @@ exports.mesas = async (req, res, next) => {
     } catch (e) { next(e) }
 }
 
-// Detalle de un producto aunque no esté a la venta 
+//Detalles de productos aunque no estena a  la venta
 exports.producto = async (req, res, next) => {
     try {
         const id = entero(req.params.id, 1)
@@ -39,7 +39,7 @@ exports.producto = async (req, res, next) => {
     } catch (e) { next(e) }
 }
 
-//valida un artículo y calcula su precio; rechaza lo inactivo aunque se mande a mano
+//valida un artículo y calcula su precio
 exports.cotizar = async (req, res, next) => {
     try {
         const b = req.body || {}

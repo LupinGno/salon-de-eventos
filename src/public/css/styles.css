@@ -1,4 +1,6 @@
-/*Estética Frutiger Aero */
+/* =====================================================================
+   Estética Frutiger Aero: cielo, agua, burbujas, vidrio y brillo
+   ===================================================================== */
 :root {
   --cielo-1: #e8f7ff;
   --cielo-2: #a9dcf7;
@@ -24,7 +26,7 @@
 
 html, body { min-height: 100%; }
 
-/* Fondo de cielo con colina de pasto */
+/* ===== Fondo de cielo con colina de pasto ===== */
 .fondo-cielo,
 .pantalla-acceso {
   min-height: 100vh;
@@ -34,7 +36,7 @@ html, body { min-height: 100%; }
     radial-gradient(ellipse 45% 25% at 78% 22%, rgba(255, 255, 255, .7), transparent 70%),
     linear-gradient(180deg, var(--cielo-3) 0%, var(--cielo-2) 45%, var(--cielo-1) 100%);
   background-attachment: fixed;
-  isolation: isolate;         
+  isolation: isolate;          /* el fondo decorativo queda detrás del contenido */
   overflow-x: hidden;
 }
 
@@ -57,7 +59,7 @@ html, body { min-height: 100%; }
 }
 .fondo-cielo::after { opacity: .55; }
 
-/*  Burbujas */
+/* ===== Burbujas ===== */
 .burbujas { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
 .burbujas span {
   position: absolute;
@@ -381,7 +383,8 @@ html, body { min-height: 100%; }
 details > summary { list-style: none; }
 details > summary::-webkit-details-marker { display: none; }
 
-/* Fotos del catálogo  */
+/* ===== Fotos del catálogo =====
+   Las fotos llenan su recuadro (cover); las ilustraciones SVG se muestran completas (contain). */
 .miniatura-tabla, .img-producto, .img-menu, .img-galeria, .img-tarjeta, .opcion-imagen .miniatura { object-fit: cover; }
 .img-producto { border-radius: 1.25rem; border: 3px solid rgba(255, 255, 255, .9); width: 100%; max-width: 260px; height: 200px; }
 .img-menu { border-radius: 14px; border: 2px solid rgba(255, 255, 255, .9); box-shadow: 0 3px 8px rgba(13, 111, 168, .2); }
@@ -393,7 +396,9 @@ img[src$=".svg"].img-galeria, img[src$=".svg"].img-tarjeta, .opcion-imagen img[s
 img[src$=".svg"].img-tarjeta { padding: .75rem; }
 img[src$=".svg"].img-producto { border: 0; }
 
-/* Punto de venta */
+/* =====================================================================
+   Punto de venta (Sprint 4)
+   ===================================================================== */
 .tarjeta-pos { cursor: pointer; overflow: hidden; transition: transform .15s ease, box-shadow .15s ease; color: var(--texto); }
 .tarjeta-pos:hover, .tarjeta-pos:focus-visible { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(13, 111, 168, .28) !important; }
 .img-pos { width: 100%; height: 120px; object-fit: cover; display: block; border-bottom: 2px solid rgba(255, 255, 255, .9); }
@@ -403,19 +408,19 @@ img[src$=".svg"].img-pos { object-fit: contain; padding: .5rem; background: line
 .unidad-pos { border: 1px solid rgba(27, 154, 214, .25); border-radius: 1rem; padding: .85rem 1rem; background: rgba(255, 255, 255, .7); }
 .unidad-pos + .unidad-pos { border-top-style: dashed; }
 
-/* Ingrediente móvil" */
+/* Ingrediente móvil: encendido = va incluido; apagado = "sin ..." */
 .chip-toggle { border: 1px solid #7fb6d6; background: rgba(255, 255, 255, .85); color: var(--texto); text-decoration: line-through; opacity: .65; }
 .btn-check:checked + .chip-toggle { text-decoration: none; opacity: 1; background: linear-gradient(180deg, #e6f6ff, #bfe6fb); border-color: var(--agua); color: var(--texto); }
 .chip-toggle-extra { border: 1px dashed #84cc16; background: rgba(255, 255, 255, .85); color: #2f4f07; }
 .btn-check:checked + .chip-toggle-extra { background: linear-gradient(180deg, #d9f99d, #a3e635); border-style: solid; color: #2f4f07; font-weight: 600; }
 
-/* Estados de cada artículo  */
+/* Estados de cada artículo (US-29) */
 .estado-entregada { background: #dcfce7; color: #166534; }
 .estado-pendiente, .estado-en_preparacion { background: #fef3c7; color: #92400e; }
 .estado-lista { background: #dbeafe; color: #1e3a8a; }
 .estado-cancelada { background: #fee2e2; color: #991b1b; text-decoration: line-through; }
 
-/* Ticket imprimible */
+/* Ticket imprimible (US-28) */
 .pagina-ticket { background: #eef6fb; min-height: 100vh; }
 .ticket { width: 80mm; max-width: 100%; margin: 1.5rem auto; background: #fff; padding: 6mm 5mm; font-family: "Consolas", "Courier New", monospace; font-size: 12px; color: #111; box-shadow: 0 6px 18px rgba(0,0,0,.12); }
 .ticket h1 { font-size: 15px; text-align: center; margin: 0; font-family: inherit; }
@@ -432,10 +437,35 @@ img[src$=".svg"].img-pos { object-fit: contain; padding: .5rem; background: line
   @page { size: 80mm auto; margin: 0; }
 }
 
-/* Cocina */
+/* =====================================================================
+   Cocina (adelanto del Módulo 3)
+   ===================================================================== */
 .tarjeta-cocina.primera { outline: 3px solid var(--pasto); outline-offset: -3px; }
 .articulo-cocina { padding: .5rem 0; border-bottom: 1px dashed rgba(27, 154, 214, .3); }
 .articulo-cocina:last-child { border-bottom: 0; }
 .articulo-cocina.en_preparacion { background: linear-gradient(90deg, rgba(254, 243, 199, .7), transparent); border-radius: .5rem; padding-left: .4rem; }
 .mod-quitar { color: #b91c1c; font-weight: 700; font-size: .85rem; text-transform: uppercase; letter-spacing: .02em; }
 .mod-extra { color: #3f6212; font-weight: 700; font-size: .85rem; }
+
+/* ---------- Sprint 5 y 6: tiempo real (Módulo 3) ---------- */
+.estado-conexion { font-weight: 500; padding: .45em .8em; }
+.estado-conexion i { font-size: .55rem; vertical-align: middle; }
+.estado-conexion.en-vivo { background: #dcfce7; color: #166534; }
+.estado-conexion.en-vivo i { animation: latido 1.6s ease-in-out infinite; }
+.estado-conexion.sin-conexion { background: #fee2e2; color: #991b1b; }
+@keyframes latido { 50% { opacity: .25; } }
+.pila-avisos {
+  position: fixed; right: 1rem; bottom: 1rem; z-index: 1080;
+  display: flex; flex-direction: column; gap: .6rem; width: min(360px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem); overflow-y: auto;
+}
+.aviso-recepcion {
+  border: 0; border-left: 6px solid #f59e0b; border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(255,255,255,.97), rgba(240,249,255,.97));
+  animation: entra-aviso .35s ease-out;
+}
+@keyframes entra-aviso { from { transform: translateY(1rem); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .aviso-recepcion, .estado-conexion.en-vivo i { animation: none; }
+}
+.resumen-cocina .badge { padding: .55em .9em; }

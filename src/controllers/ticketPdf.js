@@ -1,4 +1,6 @@
-// Puente entre Node.js y Python para el ticket PDF 
+// Puente entre Node.js y Python para el ticket PDF (US-28).
+// Ejecuta ticket_pdf.py, le manda los datos como JSON y recibe el PDF.
+// Busca Python en este orden: variable PYTHON del .env, "python", "py" (Windows) y "python3".
 const { spawn } = require('child_process')
 const path = require('path')
 
@@ -10,7 +12,7 @@ function candidatos() {
     return [...new Set(lista)]
 }
 
-// Ejecuta el script de Python y devuelve el PDF como Buffer
+// Intenta con un ejecutable; resuelve con el PDF o rechaza con un error que dice qué hacer
 function ejecutar(comando, datos) {
     return new Promise((resolve, reject) => {
         let hijo
@@ -27,7 +29,7 @@ function ejecutar(comando, datos) {
         hijo.stderr.on('data', d => { errores += d.toString() })
         hijo.on('error', e => {
             clearTimeout(reloj)
-            //ese comando no existe en esta computadora
+            // ENOENT = ese comando no existe en esta computadora: probar el siguiente
             reject(Object.assign(new Error(e.message), { siguiente: e.code === 'ENOENT' }))
         })
         hijo.on('close', codigo => {
@@ -37,7 +39,7 @@ function ejecutar(comando, datos) {
             if (/No module named ['"]?reportlab/.test(errores)) {
                 return reject(new Error('Falta la librería de Python reportlab. Instálala con: pip install reportlab'))
             }
-            // En Windows, "python" puede ser el acceso directo de la Microsoft Store 
+            // En Windows, "python" puede ser el acceso directo de la Microsoft Store (código 9009)
             if (codigo === 9009 || /was not found|no se encontr/i.test(errores)) {
                 return reject(Object.assign(new Error('no encontrado'), { siguiente: true }))
             }

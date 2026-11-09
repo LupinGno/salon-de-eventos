@@ -1,14 +1,21 @@
-// Punto de venta
+// Módulo 2 — Punto de venta y comandas (Sprint 4): US-21 a US-31
 const conexion = require('../database/db')
 const menu = require('./menuService')
 const caja = require('./cajaService')
 const ticketPdf = require('./ticketPdf')
+const tiempoReal = require('./tiempoReal')
 const { entero, fecha, fechaCorta } = require('./formatos')
 const { ROLES } = require('../routes/modulos')
 
 const esAdmin = req => req.usuario.rol === ROLES.ADMIN
 
-// Pantalla de la caja
+// Lo cancelado sale de la cola de cocina y de "Para entregar" sin recargar la página
+function avisarCancelacion() {
+    tiempoReal.emitir('cocina', 'cocina:cambio', { motivo: 'cancelacion' })
+    tiempoReal.emitir('recepcion', 'recepcion:cambio', { motivo: 'cancelacion' })
+}
+
+// Pantalla de la caja: menú vendible hoy, mesas activas y cuentas abiertas
 exports.puntoDeVenta = async (req, res, next) => {
     try {
         const productos = (await menu.menuCompleto()).filter(p => p.vendible).map(p => ({
@@ -28,10 +35,12 @@ exports.puntoDeVenta = async (req, res, next) => {
     } catch (e) { next(e) }
 }
 
-// Registra la comanda 
+// Registra la comanda (JSON). El servidor vuelve a validar y a calcular TODO.
 exports.registrar = async (req, res, next) => {
     try {
         const resultado = await caja.registrarComanda(req.body || {}, req.usuario.id)
+        // Sprint 5: la cocina se entera al instante (US-32); las nuevas se forman al final
+        if (resultado.a_cocina) tiempoReal.emitir('cocina', 'cocina:nueva', { folio: resultado.folio, articulos: resultado.a_cocina })
         res.status(201).json(resultado)
     } catch (e) {
         if (e instanceof caja.ErrorNegocio) return res.status(e.status).json({ error: e.message })
@@ -65,7 +74,7 @@ exports.detalle = async (req, res, next) => {
     } catch (e) { next(e) }
 }
 
-// Cancelacion sin rembolso
+// US-30: solicitar cancelación (sin reembolso)
 exports.cancelar = async (req, res, next) => {
     const id = entero(req.params.id, 1)
     try {
@@ -73,6 +82,7 @@ exports.cancelar = async (req, res, next) => {
         const r = await caja.solicitarCancelacion(
             { comandaId: id, articuloId, motivo: req.body.motivo },
             { id: req.usuario.id, esAdmin: esAdmin(req) })
+        if (r.aprobada) avisarCancelacion()
         res.redirect(`/caja/comandas/${id}?ok=${r.aprobada ? 'cancelada' : 'cancelacion-solicitada'}`)
     } catch (e) {
         if (e instanceof caja.ErrorNegocio) return res.redirect(`/caja/comandas/${id}?error=${encodeURIComponent(e.message)}`)
@@ -87,10 +97,11 @@ exports.cancelaciones = async (req, res, next) => {
     } catch (e) { next(e) }
 }
 
-// Solo administrador 
+// Solo administrador (la ruta lo exige)
 exports.resolver = aprobar => async (req, res, next) => {
     try {
         await caja.resolverCancelacion(entero(req.params.id, 1), aprobar, req.usuario.id)
+        if (aprobar) avisarCancelacion()
         res.redirect(`/caja/cancelaciones?ok=${aprobar ? 'cancelada' : 'cancelacion-rechazada'}`)
     } catch (e) {
         if (e instanceof caja.ErrorNegocio) return res.redirect('/caja/cancelaciones?ok=no-existe')
@@ -98,7 +109,7 @@ exports.resolver = aprobar => async (req, res, next) => {
     }
 }
 
-// Liberar la mesa
+// Liberar la mesa: cierra su cuenta (la siguiente comanda abre una nueva)
 exports.cerrarCuenta = async (req, res, next) => {
     try {
         await caja.cerrarCuenta(entero(req.params.id, 1))
@@ -109,7 +120,7 @@ exports.cerrarCuenta = async (req, res, next) => {
     }
 }
 
-// ticket en pantalla 
+// US-28: ticket en pantalla (imprimible)
 exports.ticket = async (req, res, next) => {
     try {
         const c = await comandaDeTicket(req.params.id)
@@ -118,7 +129,7 @@ exports.ticket = async (req, res, next) => {
     } catch (e) { next(e) }
 }
 
-// ticket en PDF
+// US-28: ticket en PDF, generado con Python (ticket_pdf.py)
 exports.ticketPdf = async (req, res, next) => {
     try {
         const c = await comandaDeTicket(req.params.id)
@@ -145,7 +156,7 @@ async function comandaDeTicket(ticketId) {
     return t ? caja.detalleComanda(t.comanda_id) : null
 }
 
-// Lo que necesita el script de Python
+// Lo que necesita el script de Python: solo texto y números
 function datosTicket(c) {
     return {
         negocio: 'Salón de Eventos y Snacks',

@@ -18,16 +18,12 @@ const soloAdmin = [autenticado, permitirRoles(ROLES.ADMIN)]
 const catalogo = [autenticado, permitirModulo('catalogos')]
 const conImagen = campoImagen('archivo')
 
-// Mensajes de éxito comunes 
+// Mensajes de éxito comunes (?ok=...)
 const MENSAJES = {
     creado: 'Se creó correctamente.', guardado: 'Cambios guardados.', eliminado: 'Se eliminó correctamente.',
     baja: 'El producto se dio de baja: ya no se puede vender.', alta: 'El producto volvió a estar a la venta.',
     estilo: 'Estilo guardado.', tamano: 'Tamaño guardado.', mesas: 'Mesas añadidas.', imagen: 'Imagen subida.',
     permisos: 'Permisos actualizados; aplican desde la siguiente página que abra cada usuario.',
-    'mesa-liberada': 'Mesa liberada: su cuenta quedó cerrada.',
-    cancelada: 'Cancelación aprobada. No hay reembolso.',
-    'cancelacion-solicitada': 'Solicitud enviada: un administrador debe aprobarla.',
-    'cancelacion-rechazada': 'La solicitud de cancelación se rechazó.',
     'mesa-liberada': 'Mesa liberada: su cuenta quedó cerrada.',
     cancelada: 'Cancelación aprobada. No hay reembolso.',
     'cancelacion-solicitada': 'Solicitud enviada: un administrador debe aprobarla.',
@@ -44,17 +40,17 @@ router.use((req, res, next) => {
     next()
 })
 
-// Públicas
+// ---------- Públicas ----------
 router.get('/login', soloInvitados, authController.vistaLogin)
 router.post('/login', authController.login)
 router.get('/register', soloInvitados, authController.vistaRegistro)
 router.post('/register', authController.registro)
 router.get('/logout', authController.logout)
 
-// Inicio 
+// ---------- Inicio ----------
 router.get('/', autenticado, (req, res) => res.render('index', { titulo: 'Inicio' }))
 
-//  usuarios
+// ---------- Módulo 0: usuarios (solo Administrador) ----------
 router.get('/usuarios', soloAdmin, usuariosController.lista)
 router.get('/usuarios/nuevo', soloAdmin, usuariosController.formNuevo)
 router.post('/usuarios', soloAdmin, usuariosController.crear)
@@ -62,7 +58,7 @@ router.get('/usuarios/:id/editar', soloAdmin, usuariosController.formEditar)
 router.post('/usuarios/:id', soloAdmin, usuariosController.actualizar)
 router.post('/usuarios/:id/eliminar', soloAdmin, usuariosController.eliminar)
 
-// administración y catálogos
+// ---------- Módulo 1: administración y catálogos ----------
 router.get('/catalogos', catalogo, catalogos.inicio)
 
 // Recetas
@@ -127,17 +123,17 @@ router.get('/catalogos/permisos', soloAdmin, catalogos.permisos)
 router.post('/catalogos/permisos', soloAdmin, catalogos.guardarPermisos)
 router.get('/catalogos/menu', catalogo, catalogos.vistaMenu)
 
-//Consultas
+// ---------- Consultas (Cliente) ----------
 router.get('/consultas', autenticado, permitirModulo('consultas'), rentas.consultas)
 
-// API para la caja 
+// ---------- API para la caja (Sprint 4) ----------
 const apiCaja = [autenticado, permitirModulo('caja-snacks', 'catalogos')]
 router.get('/api/menu', apiCaja, api.menu)
 router.get('/api/mesas', apiCaja, api.mesas)
 router.get('/api/productos/:id', apiCaja, api.producto)
 router.post('/api/cotizar', apiCaja, api.cotizar)
 
-// Punto de venta y comandas 
+// ---------- Punto de venta y comandas (Sprint 4: US-21 a US-31) ----------
 const enCaja = [autenticado, permitirModulo('caja-snacks')]
 router.get('/caja', enCaja, cajaCtl.puntoDeVenta)
 router.post('/caja/comandas', enCaja, cajaCtl.registrar)
@@ -151,7 +147,7 @@ router.post('/caja/cuentas/:id/cerrar', enCaja, cajaCtl.cerrarCuenta)
 router.get('/caja/tickets/:id', enCaja, cajaCtl.ticket)
 router.get('/caja/tickets/:id/pdf', enCaja, cajaCtl.ticketPdf)
 
-// Cocina y recepción 
+// ---------- Módulo 3: cocina y recepción (Sprints 5 y 6: US-32 a US-37) ----------
 const enCocina = [autenticado, permitirModulo('cocina')]
 router.get('/cocina', enCocina, cocinaCtl.monitor)
 router.post('/cocina/articulos/:id/:accion', enCocina, cocinaCtl.cambiarArticulo)
@@ -159,8 +155,13 @@ router.post('/cocina/comandas/:id/lista', enCocina, cocinaCtl.comandaLista)
 router.get('/caja/entregas', enCaja, cocinaCtl.entregas)
 router.post('/caja/articulos/:id/entregar', enCaja, cocinaCtl.entregarArticulo)
 router.post('/caja/comandas/:id/entregar', enCaja, cocinaCtl.entregarComanda)
+// Sprint 6: avisos a recepción (US-35), control de pendientes (US-37) e historial de entregas (US-36)
+router.get('/caja/avisos', enCaja, cocinaCtl.avisos)
+router.post('/caja/avisos/:id/visto', enCaja, cocinaCtl.avisoVisto)
+router.get('/caja/pendientes', enCaja, cocinaCtl.pendientes)
+router.get('/caja/entregadas', enCaja, cocinaCtl.entregadas)
 
-//Módulos de los siguientes sprints 
+// ---------- Módulos de los siguientes sprints ----------
 router.get('/modulos/:clave', autenticado, (req, res, next) => {
     const modulo = buscarModulo(req.params.clave)
     if (!modulo) return next() // → 404

@@ -1,19 +1,23 @@
-// Pantallas de cocina
+// se actualizan AL INSTANTE cuando el servidor avisa por Socket.IO
 (() => {
     'use strict'
     const cola = document.querySelector('[data-autorefresh]')
     if (!cola) return
-    const aviso = document.getElementById('actualizado')
-    const CADA_MS = 8000
+    const RESPALDO_MS = 8000        
+    const REPASO_MS = 60000        
 
+    let pidiendo = false, otraVez = false
     async function actualizar() {
+        if (pidiendo) { otraVez = true; return }      
+        pidiendo = true
         try {
             const r = await fetch(cola.dataset.autorefresh, { headers: { Accept: 'text/html' } })
-            if (r.redirected || !r.ok) return location.reload()   // sesión vencida u otro problema
+            if (r.redirected || !r.ok) return location.reload()   
             cola.innerHTML = await r.text()
-            if (aviso) aviso.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-        } catch (e) {
-            if (aviso) aviso.textContent = 'Sin conexión con el servidor…'
+        } catch (e) {  }
+        finally {
+            pidiendo = false
+            if (otraVez) { otraVez = false; actualizar() }
         }
     }
 
@@ -35,6 +39,13 @@
         }
     })
 
-    setInterval(actualizar, CADA_MS)
-    if (aviso) aviso.textContent = 'Se actualiza cada 8 segundos'
+    // Avisos del servidor 
+    window.addEventListener('tiempo-real', actualizar)
+
+    // Respaldo
+    let ultimo = Date.now()
+    setInterval(() => {
+        const vivo = window.tiempoReal && window.tiempoReal.conectado
+        if (Date.now() - ultimo >= (vivo ? REPASO_MS : RESPALDO_MS)) { ultimo = Date.now(); actualizar() }
+    }, 1000)
 })()

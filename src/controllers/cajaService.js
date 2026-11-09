@@ -1,4 +1,5 @@
-// Validacion de caja servicio
+// Reglas del punto de venta (Módulo 2 — Sprint 4, US-21 a US-31).
+// Todo se valida aquí, en el servidor: la pantalla de caja solo ayuda a armar el pedido.
 const conexion = require('../database/db')
 const menu = require('./menuService')
 const { ErrorNegocio } = menu
@@ -9,21 +10,21 @@ const MAX_CANTIDAD_LINEA = 50     // unidades iguales en una línea
 
 const redondear = n => Math.round(n * 100) / 100
 
-// Caja de la barra de snacks
+// Caja de la barra de snacks (Módulo 6 agregará turnos por cajero)
 async function cajaSnacks(db = conexion) {
     const [[caja]] = await db.query("SELECT id, nombre FROM cajas WHERE servicio = 'snacks' AND activo = 1 ORDER BY id LIMIT 1")
     if (!caja) throw new ErrorNegocio('No hay una caja de snacks activa. Revisa la tabla cajas.', 409)
     return caja
 }
 
-// Cuenta abierta de una mesa 
+// Cuenta abierta de una mesa (US-27)
 async function cuentaAbiertaDeMesa(mesaId, db = conexion) {
     const [[cuenta]] = await db.query(
         "SELECT * FROM cuentas WHERE mesa_id = ? AND estado = 'abierta' ORDER BY id DESC LIMIT 1", [mesaId])
     return cuenta || null
 }
 
-// Mesas con cuenta abierta
+// Mesas con cuenta abierta: quién está sentado, cuánto lleva y qué falta por entregar
 async function cuentasAbiertas() {
     const [filas] = await conexion.query(`
         SELECT cu.id, cu.mesa_id, m.numero AS mesa, cu.cliente_nombre, cu.abierta_en,
@@ -46,7 +47,7 @@ async function cerrarCuenta(id) {
     if (!r.affectedRows) throw new ErrorNegocio('Esa cuenta no existe o ya estaba cerrada.', 404)
 }
 
-// Valida el encabezado del pedido
+// Valida el encabezado del pedido: mesa o para llevar, y nombre del cliente (US-21)
 async function validarDestino(datos) {
     const paraLlevar = datos.para_llevar === true || datos.para_llevar === 1 || datos.para_llevar === '1' || datos.para_llevar === 'true'
     const cliente = typeof datos.cliente === 'string' ? datos.cliente.trim().replace(/\s+/g, ' ') : ''
@@ -62,7 +63,8 @@ async function validarDestino(datos) {
     return { paraLlevar: false, mesa, cliente }
 }
 
-// Valida y cotiza cada línea
+// Valida y cotiza cada línea con las reglas del Módulo 1 (US-22, US-24, US-25, US-26).
+// Devuelve una lista de UNIDADES: cantidad 3 → 3 unidades iguales (US-23).
 async function armarUnidades(lineas) {
     if (!Array.isArray(lineas) || !lineas.length) throw new ErrorNegocio('El pedido está vacío.', 422)
     const unidades = []
@@ -82,7 +84,7 @@ async function armarUnidades(lineas) {
     return unidades
 }
 
-// Valida el cobro 
+// Valida el cobro (US-31): en efectivo calcula el cambio
 function validarPago(pago, total) {
     pago = pago || {}
     const medio = String(pago.medio || '')
@@ -99,7 +101,8 @@ function validarPago(pago, total) {
     return { medio, recibido: total, cambio: 0, referencia: referencia || null }
 }
 
-//registra la comanda ya pagada, sus unidades, cambios y su ticket.
+// US-21 a US-31: registra la comanda ya pagada, sus unidades, cambios y su ticket.
+// datos = { mesa_id, para_llevar, cliente, articulos: [{ producto_id, estilo_id, tamano_id, quitar, extras, cantidad }], pago: { medio, recibido, referencia } }
 async function registrarComanda(datos, usuarioId) {
     const destino = await validarDestino(datos || {})
     const unidades = await armarUnidades(datos.articulos)
@@ -111,7 +114,7 @@ async function registrarComanda(datos, usuarioId) {
         await db.beginTransaction()
         const caja = await cajaSnacks(db)
 
-        // Cuenta
+        // Cuenta: si la mesa ya tiene una abierta, el pedido se suma a ella (US-27)
         let cuentaId, cuentaNueva = true
         if (destino.mesa) {
             const [[abierta]] = await db.query(
@@ -120,7 +123,7 @@ async function registrarComanda(datos, usuarioId) {
         }
         if (!cuentaId) {
             const [r] = await db.query(
-                // Para llevar no ocupa mesa
+                // Para llevar no ocupa mesa: su cuenta nace cerrada
                 `INSERT INTO cuentas (mesa_id, para_llevar, cliente_nombre, estado, cerrada_en)
                  VALUES (?, ?, ?, ?, ${destino.paraLlevar ? 'NOW()' : 'NULL'})`,
                 [destino.mesa ? destino.mesa.id : null, destino.paraLlevar ? 1 : 0, destino.cliente,
@@ -138,14 +141,15 @@ async function registrarComanda(datos, usuarioId) {
              destino.cliente, total, pago.medio, pago.recibido, pago.cambio, pago.referencia])
         const comandaId = rc.insertId
 
-        // Una fila por unidad.
+        // Una fila por unidad. US-29: lo que no se prepara se entrega al momento; lo demás va a cocina
         for (const u of unidades) {
             const [ra] = await db.query(
                 `INSERT INTO comanda_articulos (comanda_id, producto_id, estilo_id, tamano_id, descripcion, piezas,
-                                                precio_unitario, va_a_cocina, estado, entregado_en)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${u.va_a_cocina ? 'NULL' : 'NOW()'})`,
+                                                precio_unitario, va_a_cocina, estado, entregado_en, entregado_por)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${u.va_a_cocina ? 'NULL' : 'NOW()'}, ?)`,
                 [comandaId, u.producto_id, u.estilo_id, u.tamano_id, u.descripcion, u.piezas || null,
-                 u.precio, u.va_a_cocina ? 1 : 0, u.va_a_cocina ? 'pendiente' : 'entregada'])
+                 u.precio, u.va_a_cocina ? 1 : 0, u.va_a_cocina ? 'pendiente' : 'entregada',
+                 u.va_a_cocina ? null : usuarioId])  // Sprint 5: quién entregó lo que sale al momento
             for (const m of u.modificaciones) {
                 await db.query(
                     'INSERT INTO articulo_modificaciones (articulo_id, ingrediente_id, tipo, nombre, precio) VALUES (?, ?, ?, ?, ?)',
@@ -153,7 +157,7 @@ async function registrarComanda(datos, usuarioId) {
             }
         }
 
-        // Ticket con su propio número 
+        // Ticket con su propio número (US-28)
         const [[{ folioTicket }]] = await db.query('SELECT COALESCE(MAX(folio), 0) + 1 AS folioTicket FROM tickets FOR UPDATE')
         const [rt] = await db.query('INSERT INTO tickets (comanda_id, folio) VALUES (?, ?)', [comandaId, folioTicket])
 
@@ -171,7 +175,7 @@ async function registrarComanda(datos, usuarioId) {
     }
 }
 
-// Comanda completa
+// Comanda completa: unidades con sus cambios, ticket, cuenta acumulada y cancelaciones
 async function detalleComanda(id) {
     const [[c]] = await conexion.query(`
         SELECT co.*, m.numero AS mesa, u.nombre AS atendio, ca.nombre AS caja, ca.id AS caja_numero,
@@ -196,7 +200,7 @@ async function detalleComanda(id) {
         a.extras = mods.filter(m => m.articulo_id === a.id && m.tipo === 'extra')
     })
 
-    // Cuenta de la mesa
+    // Cuenta de la mesa: todas las comandas de la misma visita (US-27)
     const [cuenta] = await conexion.query(
         `SELECT id, folio, total, estado, creada_en FROM comandas WHERE cuenta_id = ? ORDER BY id`, [c.cuenta_id])
     const [cancelaciones] = await conexion.query(`
@@ -214,7 +218,7 @@ async function detalleComanda(id) {
     }
 }
 
-// Junta unidades idénticas para el ticket
+// Junta unidades idénticas para el ticket: "2 × Hamburguesa clásica · Sin cebolla"
 function agrupar(articulos) {
     const grupos = []
     for (const a of articulos) {
@@ -227,7 +231,7 @@ function agrupar(articulos) {
     return grupos
 }
 
-// Comandas de un día 
+// Comandas de un día (historial de caja)
 async function comandasDelDia(fecha) {
     const [filas] = await conexion.query(`
         SELECT co.id, co.folio, co.creada_en, co.para_llevar, m.numero AS mesa, co.cliente_nombre,
@@ -246,7 +250,8 @@ async function comandasDelDia(fecha) {
     return filas
 }
 
-// cancelar sin reembolso. 
+// US-30: cancelar sin reembolso. Caja la pide; un administrador la aprueba.
+// Si quien la pide ES administrador, queda aprobada en el mismo paso.
 async function solicitarCancelacion({ comandaId, articuloId, motivo }, usuario) {
     motivo = typeof motivo === 'string' ? motivo.trim() : ''
     if (motivo.length < 5 || motivo.length > 255) throw new ErrorNegocio('Escribe el motivo de la cancelación (5 a 255 letras).', 422)
@@ -291,7 +296,7 @@ async function resolverCancelacion(id, aprobar, adminId) {
             'UPDATE cancelaciones SET estado = ?, autorizo_id = ?, resuelta_en = NOW() WHERE id = ?',
             [aprobar ? 'aprobada' : 'rechazada', adminId, id])
         if (aprobar) {
-            // Sin reembolso
+            // Sin reembolso: el total cobrado no cambia; solo se marcan los artículos
             if (k.articulo_id) {
                 await db.query("UPDATE comanda_articulos SET estado = 'cancelada' WHERE id = ?", [k.articulo_id])
             } else {

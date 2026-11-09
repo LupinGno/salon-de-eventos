@@ -1,0 +1,29 @@
+<% const hora = v => v ? String(v).slice(11, 16) : '—' %>
+<% if (!filas.length) { %>
+  <div class="card border-0 shadow-sm"><div class="card-body p-5 text-center text-body-secondary">
+    <i class="bi bi-clock-history fs-1 d-block mb-2"></i>Todavía no hay entregas hoy.
+  </div></div>
+<% } else { %>
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead>
+        <tr><th scope="col">Hora</th><th scope="col">Comanda</th><th scope="col">Lugar</th><th scope="col">Artículo</th><th scope="col">Salió de cocina</th><th scope="col">Entregó</th><th scope="col" class="text-end">Espera</th></tr>
+      </thead>
+      <tbody>
+      <% filas.forEach(a => { %>
+        <tr>
+          <td class="fw-semibold"><%= hora(a.entregado_en) %></td>
+          <td>#<%= a.folio %></td>
+          <td><%= a.para_llevar ? 'Para llevar' : `Mesa ${a.mesa}` %></td>
+          <td><%= a.descripcion %></td>
+          <td><%= a.va_a_cocina ? hora(a.lista_en) : 'Al momento' %></td>
+          <td><%= a.entrego || '—' %></td>
+          <td class="text-end"><%= a.espera %> min</td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>

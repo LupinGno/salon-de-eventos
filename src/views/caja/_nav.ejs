@@ -2,12 +2,14 @@
 const seccionesCaja = [
   ['/caja', 'Nuevo pedido', 'cart-plus', r => r === '/caja'],
   ['/caja/comandas', 'Comandas del día', 'receipt', r => r.startsWith('/caja/comandas') || r.startsWith('/caja/tickets')],
-  ['/caja/entregas', 'Para entregar', 'bell', r => r.startsWith('/caja/entregas')],
+  ['/caja/entregas', 'Para entregar', 'bell', r => r.startsWith('/caja/entregas'), 'contador-avisos'],
+  ['/caja/pendientes', 'Pendientes', 'hourglass-split', r => r.startsWith('/caja/pendientes')],
+  ['/caja/entregadas', 'Entregado hoy', 'clock-history', r => r.startsWith('/caja/entregadas')],
   ['/caja/cancelaciones', 'Cancelaciones', 'x-octagon', r => r.startsWith('/caja/cancelaciones')]
 ]
 %>
 <nav class="nav nav-pills nav-catalogo gap-1 mb-4 flex-nowrap overflow-auto pb-1" aria-label="Secciones de la caja">
-  <% seccionesCaja.forEach(([ruta, nombre, icono, activa]) => { %>
-    <a class="nav-link text-nowrap <%= activa(rutaActual) ? 'active' : '' %>" href="<%= ruta %>"><i class="bi bi-<%= icono %>"></i> <%= nombre %></a>
+  <% seccionesCaja.forEach(([ruta, nombre, icono, activa, contador]) => { %>
+    <a class="nav-link text-nowrap <%= activa(rutaActual) ? 'active' : '' %>" href="<%= ruta %>"><i class="bi bi-<%= icono %>"></i> <%= nombre %><% if (contador) { %> <span class="badge rounded-pill text-bg-danger d-none" id="<%= contador %>" aria-label="avisos sin atender"></span><% } %></a>
   <% }) %>
 </nav>

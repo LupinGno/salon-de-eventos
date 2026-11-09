@@ -1,0 +1,35 @@
+<% const nombres = { pendiente: 'En espera', en_preparacion: 'Preparando', lista: 'Listo' } %>
+<% if (!comandas.length) { %>
+  <div class="card border-0 shadow-sm"><div class="card-body p-5 text-center text-body-secondary">
+    <i class="bi bi-emoji-smile fs-1 d-block mb-2"></i>Todas las comandas de hoy están entregadas.
+  </div></div>
+<% } else { %>
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr><th scope="col">Comanda</th><th scope="col">Lugar</th><th scope="col" class="w-25">Avance</th><th scope="col">Ya entregado</th><th scope="col">Falta</th><th scope="col" class="text-end">Espera</th></tr>
+      </thead>
+      <tbody>
+      <% comandas.forEach(c => { const pct = Math.round(100 * c.entregados / c.total) %>
+        <tr>
+          <td><a class="fw-bold" href="/caja/comandas/<%= c.id %>">#<%= c.folio %></a><div class="small text-body-secondary"><%= c.cliente_nombre %></div></td>
+          <td><span class="badge <%= c.para_llevar ? 'text-bg-primary' : 'text-bg-light border' %>"><%= c.para_llevar ? 'PARA LLEVAR' : `Mesa ${c.mesa}` %></span></td>
+          <td>
+            <div class="progress" role="progressbar" aria-label="Entregado" aria-valuenow="<%= pct %>" aria-valuemin="0" aria-valuemax="100" style="height:.9rem">
+              <div class="progress-bar bg-success" style="width: <%= pct %>%"></div>
+            </div>
+            <div class="small mt-1"><strong><%= c.entregados %> de <%= c.total %></strong> entregados<% if (c.entregados > 0) { %> · <span class="badge text-bg-warning">Entrega parcial</span><% } %></div>
+          </td>
+          <td class="small"><%= c.dados || '—' %></td>
+          <td class="small">
+            <% c.faltan.forEach(a => { %><div><span class="badge estado-<%= a.estado %>"><%= nombres[a.estado] %></span> <%= a.descripcion %></div><% }) %>
+          </td>
+          <td class="text-end text-nowrap"><span class="badge text-bg-<%= c.minutos >= 20 ? 'danger' : c.minutos >= 10 ? 'warning' : 'success' %>"><%= c.minutos %> min</span></td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>

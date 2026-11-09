@@ -1,3 +1,13 @@
+<div class="col-12">
+  <div class="d-flex flex-wrap gap-2 resumen-cocina" aria-label="Resumen de la cocina">
+    <span class="badge text-bg-light border fs-6 fw-normal"><i class="bi bi-hourglass"></i> En espera: <strong><%= resumen.pendientes %></strong></span>
+    <span class="badge estado-en_preparacion fs-6 fw-normal"><i class="bi bi-fire"></i> Preparando: <strong><%= resumen.preparando %></strong></span>
+    <span class="badge estado-entregada fs-6 fw-normal"><i class="bi bi-check2-all"></i> Listos hoy: <strong><%= resumen.listas_hoy %></strong></span>
+    <% if (resumen.promedio_min !== null) { %>
+    <span class="badge text-bg-light border fs-6 fw-normal" title="De que se cobró a que cocina lo liberó"><i class="bi bi-stopwatch"></i> Promedio hoy: <strong><%= resumen.promedio_min %> min</strong></span>
+    <% } %>
+  </div>
+</div>
 <% if (!comandas.length) { %>
   <div class="col-12">
     <div class="card border-0 shadow-sm"><div class="card-body p-5 text-center text-body-secondary">

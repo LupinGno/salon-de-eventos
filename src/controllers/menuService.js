@@ -1,4 +1,6 @@
-// reglas de negocio para el menú y la cotización de artículos
+// Reglas del menú que NO dependen de la pantalla (US-08, US-09, US-12, US-13, US-14, US-15).
+// La caja (Sprint 4) usará estas mismas funciones: así un producto inactivo
+// se rechaza en el servidor aunque alguien lo mande a mano.
 const conexion = require('../database/db')
 
 class ErrorNegocio extends Error {
@@ -20,7 +22,8 @@ const SQL_PRODUCTO = `
       LEFT JOIN imagenes i ON i.id = p.imagen_id
       LEFT JOIN temporadas t ON t.id = p.temporada_id`
 
-// ¿Se puede vender HOY? 
+// ¿Se puede vender HOY? Devuelve { vendible, motivo }
+// p trae `vencido` y `hoy` calculados por MySQL (ver SQL_PRODUCTO)
 function estadoProducto(p) {
     const hoy = p.hoy
     if (!p.activo) {
@@ -83,7 +86,8 @@ async function menuCompleto() {
     return detalles
 }
 
-//  valida un artículo como lo mandaría la caja y calcula su precio
+// US-14: valida un artículo como lo mandaría la caja y calcula su precio.
+// item = { producto_id, estilo_id, tamano_id, quitar: [ingrediente_id], extras: [ingrediente_id] }
 async function cotizar(item) {
     const id = Number(item.producto_id)
     if (!Number.isInteger(id) || id <= 0) throw new ErrorNegocio('Falta el producto.', 422)
@@ -93,10 +97,10 @@ async function cotizar(item) {
     if (!p.vendible) throw new ErrorNegocio(`"${p.nombre}" no se puede vender: ${p.motivo}.`, 409)
 
     const desglose = []
-    const modificaciones = []   // para guardar en articulo_modificaciones 
+    const modificaciones = []   // para guardar en articulo_modificaciones (Sprint 4)
     let precio, tamanoElegido = null, estiloElegido = null
 
-    // Tamaño
+    // Tamaño: obligatorio si el producto tiene tamaños
     if (p.tamanos.length) {
         const tamano = p.tamanos.find(t => t.id === Number(item.tamano_id))
         if (!tamano) throw new ErrorNegocio(`Elige un tamaño válido para "${p.nombre}".`, 422)
@@ -108,7 +112,7 @@ async function cotizar(item) {
         desglose.push({ concepto: p.nombre, importe: p.precio_base })
     }
 
-    // Estilo
+    // Estilo: obligatorio si el producto tiene estilos
     const estilosDisponibles = p.estilos.filter(e => e.disponible)
     if (p.estilos.length) {
         const estilo = p.estilos.find(e => e.id === Number(item.estilo_id))
@@ -123,7 +127,7 @@ async function cotizar(item) {
         }
     }
 
-    // Quitar ingredientes
+    // Quitar ingredientes: solo móviles, y nunca cambia el precio (US-08, US-09)
     const quitar = [...new Set((item.quitar || []).map(Number))]
     for (const ingId of quitar) {
         if (!p.permite_quitar) throw new ErrorNegocio(`En ${p.categoria} no se pueden quitar ingredientes.`, 422)
@@ -135,7 +139,7 @@ async function cotizar(item) {
         modificaciones.push({ ingrediente_id: movil.id, tipo: 'quitar', nombre: movil.nombre, precio: 0 })
     }
 
-    // Extras
+    // Extras: cada uno se cobra (US-09)
     const extras = [...new Set((item.extras || []).map(Number))]
     for (const ingId of extras) {
         const extra = p.extras.find(e => e.id === ingId)
@@ -145,7 +149,7 @@ async function cotizar(item) {
         modificaciones.push({ ingrediente_id: extra.id, tipo: 'extra', nombre: extra.nombre, precio: extra.precio })
     }
 
-    // Nombre como se vende
+    // Nombre como se vende: "Pizza Familiar · Hawaiana"
     const descripcion = [p.nombre + (tamanoElegido ? ` ${tamanoElegido.nombre}` : ''), estiloElegido && estiloElegido.nombre]
         .filter(Boolean).join(' · ')
 
