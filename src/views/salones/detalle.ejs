@@ -1,0 +1,225 @@
+<%- include('../partials/encabezado') %>
+<%
+const tamanos = { chico: 'Chico', mediano: 'Mediano', grande: 'Grande' }
+const medios = { efectivo: 'efectivo', tarjeta: 'tarjeta', transferencia: 'transferencia' }
+const fechaLarga = iso => new Date(iso + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+const colorEstado = { apartada: 'text-bg-warning', liquidada: 'text-bg-primary', en_curso: 'text-bg-info', realizada: 'text-bg-success', cancelada: 'text-bg-secondary' }
+const cuotaTexto = { retenida: 'En garantía', devuelta: 'Devuelta', cobrada: 'No se devolvió' }
+const resultados = { limpio: 'Limpio', sucio: 'Sucio', danos: 'Con daños' }
+const ineOculto = r.responsable_ine.replace(/^.{14}/, '••••••••••••••')
+const m = r.mobiliario
+%>
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1 class="h3 mb-0">Reserva <%= r.folio %> <span class="badge <%= colorEstado[r.estado] %> fs-6 align-middle"><%= r.estado_texto %></span></h1>
+    <p class="text-body-secondary mb-0"><%= r.salon %> · <%= fechaLarga(r.fecha_evento) %> · <%= r.personas %> personas · Registró <%= r.encargado %></p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="/salones/reservas/<%= r.id %>/contrato.pdf" target="_blank" class="btn btn-outline-primary"><i class="bi bi-file-earmark-text"></i> Contrato firmado</a>
+    <a href="/salones/reservas/<%= r.id %>/comprobante.pdf" target="_blank" class="btn btn-outline-primary"><i class="bi bi-receipt"></i> Comprobante</a>
+  </div>
+</div>
+
+<%- include('_nav') %>
+<%- include('../partials/errores', { errores }) %>
+
+<% if (r.vencida) { %>
+<div class="alert alert-danger"><i class="bi bi-alarm"></i> El pago venció el <%= r.fecha_limite_texto %>: faltan <strong><%= f.dinero(r.saldo) %></strong>. Sin liquidar no se entrega el salón.</div>
+<% } else if (r.estado === 'apartada') { %>
+<div class="alert alert-warning"><i class="bi bi-hourglass-split"></i> Faltan <strong><%= f.dinero(r.saldo) %></strong>; se liquida a más tardar el <strong><%= r.fecha_limite_texto %></strong>.</div>
+<% } %>
+<% if (r.es_hoy && ['apartada', 'liquidada'].includes(r.estado)) { %>
+<div class="alert alert-info"><i class="bi bi-calendar-check"></i> Hoy es el evento: entrega el salón cuando llegue el responsable con su INE.</div>
+<% } %>
+<% if (r.cargo_pendiente > 0) { %>
+<div class="alert alert-danger"><i class="bi bi-tools"></i> El responsable debe <strong><%= f.dinero(r.cargo_pendiente) %></strong> por daños.</div>
+<% } %>
+
+<div class="row g-4">
+  <div class="col-xl-8 d-grid gap-4 align-content-start">
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Evento</h2>
+        <dl class="row small mb-0">
+          <dt class="col-sm-4">Salón</dt><dd class="col-sm-8"><%= r.salon %> (<%= tamanos[r.tamano] %>, aforo <%= r.aforo %>)</dd>
+          <dt class="col-sm-4">Tipo de renta</dt><dd class="col-sm-8"><%= r.con_alimentos ? 'Con alimentos' : 'Sin alimentos: el cliente trae su comida y deja limpio' %><% if (r.alimentos_cancelados_en) { %> <span class="badge text-bg-light">alimentos cancelados</span><% } %></dd>
+          <dt class="col-sm-4">Fiesta de menores</dt><dd class="col-sm-8"><%= r.fiesta_menores ? 'Sí: ningún menor sale solo' : 'No' %></dd>
+          <dt class="col-sm-4">Mobiliario</dt><dd class="col-sm-8"><%= m.sillas %> sillas, <%= m.mesas %> mesas, <%= m.manteles %> manteles blancos, bocina sin música<%= m.desechables ? `, ${m.desechables} juegos de desechables` : '' %></dd>
+          <dt class="col-sm-4">Brincolines</dt><dd class="col-sm-8"><%= r.brincolines.map(b => b.nombre).join(', ') || 'Ninguno' %></dd>
+          <% if (r.entregado_en) { %><dt class="col-sm-4">Salón entregado</dt><dd class="col-sm-8"><%= f.fechaCorta(r.entregado_en) %> por <%= r.entrego %></dd><% } %>
+          <% if (r.recibido_en) { %><dt class="col-sm-4">Salón recibido</dt><dd class="col-sm-8"><%= f.fechaCorta(r.recibido_en) %> por <%= r.recibio %>: <strong><%= resultados[r.resultado] %></strong><%= r.danos_descripcion ? ` — ${r.danos_descripcion}` : '' %><%= Number(r.costo_danos) > 0 ? ` (reparación ${f.dinero(r.costo_danos)})` : '' %></dd><% } %>
+        </dl>
+      </div>
+    </section>
+
+    <% if (r.alimentos.length) { %>
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Alimentos del evento</h2>
+        <% if (r.alimentos_cancelados_en) { %><p class="small text-danger-emphasis">Cancelados el <%= f.fechaCorta(r.alimentos_cancelados_en) %>: <%= r.motivo_alimentos %></p><% } %>
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Platillo</th><th class="text-end">Cant.</th><th class="text-end">Precio</th><th class="text-end">Importe</th></tr></thead>
+          <tbody>
+            <% r.alimentos.forEach(a => { %>
+            <tr class="<%= a.estado === 'cancelado' ? 'text-decoration-line-through text-body-secondary' : '' %>">
+              <td><%= a.descripcion %></td><td class="text-end"><%= a.cantidad %></td>
+              <td class="text-end"><%= f.dinero(a.precio_unitario) %></td><td class="text-end"><%= f.dinero(a.precio_unitario * a.cantidad) %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <% } %>
+
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Quién renta y quién responde</h2>
+        <div class="row g-3 small">
+          <div class="col-md-6">
+            <div class="fw-semibold"><i class="bi bi-wallet2"></i> Renta y paga</div>
+            <div><%= r.cliente_nombre %></div>
+            <div class="text-body-secondary">Tel. <%= r.cliente_telefono %><%= r.cliente_correo ? ` · ${r.cliente_correo}` : '' %></div>
+            <div class="text-body-secondary">Pagó el apartado y la cuota con <strong><%= medios[r.medio_pago] %></strong></div>
+          </div>
+          <div class="col-md-6">
+            <div class="fw-semibold"><i class="bi bi-person-badge"></i> Responsable <% if (r.firmado) { %><span class="badge text-bg-success">firmó</span><% } %></div>
+            <div><%= r.responsable_nombre %></div>
+            <div class="text-body-secondary">INE <%= ineOculto %> · Cel. <%= r.responsable_celular %></div>
+            <div class="text-body-secondary"><%= r.responsable_direccion %></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Pagos y devoluciones (Caja 2)</h2>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Fecha</th><th>Concepto</th><th>Persona</th><th>Medio</th><th>Atendió</th><th class="text-end">Monto</th></tr></thead>
+            <tbody>
+              <% r.pagos.forEach(p => { %>
+              <tr>
+                <td class="text-nowrap"><%= p.creado_texto %></td>
+                <td><%= p.concepto_texto %><% if (p.referencia) { %><div class="small text-body-secondary">Ref. <%= p.referencia %></div><% } %></td>
+                <td><%= p.persona %></td><td><%= medios[p.medio] %></td><td class="small"><%= p.usuario %></td>
+                <td class="text-end fw-semibold <%= p.monto < 0 ? 'text-danger' : '' %>"><%= p.monto < 0 ? '−' + f.dinero(-p.monto) : f.dinero(p.monto) %></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-xl-4 d-grid gap-4 align-content-start">
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Importes</h2>
+        <table class="table table-sm small mb-0">
+          <tr><td>Renta del salón</td><td class="text-end"><%= f.dinero(r.precio_renta) %></td></tr>
+          <% if (Number(r.total_alimentos) > 0) { %><tr><td>Alimentos<%= r.alimentos_cancelados_en ? ' (cancelados)' : '' %></td><td class="text-end <%= r.alimentos_cancelados_en ? 'text-decoration-line-through' : '' %>"><%= f.dinero(r.total_alimentos) %></td></tr><% } %>
+          <tr class="fw-semibold"><td>Total de la renta</td><td class="text-end"><%= f.dinero(r.precio_total) %></td></tr>
+          <tr><td>Pagado</td><td class="text-end"><%= f.dinero(r.pagado_renta) %></td></tr>
+          <tr class="fw-semibold"><td>Saldo</td><td class="text-end <%= r.saldo > 0 ? 'text-danger' : 'text-success' %>"><%= f.dinero(r.saldo) %></td></tr>
+          <tr><td>Cuota de garantía</td><td class="text-end"><%= f.dinero(r.cuota_garantia) %> <span class="badge text-bg-light"><%= cuotaTexto[r.estado_cuota] %></span></td></tr>
+          <% if (r.cargo_danos > 0) { %><tr><td>Cargo por daños</td><td class="text-end"><%= f.dinero(r.cargo_danos) %><%= r.cargo_pendiente > 0 ? ' (pendiente)' : ' (pagado)' %></td></tr><% } %>
+        </table>
+      </div>
+    </section>
+
+    <% if (r.puede.liquidar) { %>
+    <form method="post" action="/salones/reservas/<%= r.id %>/liquidar" class="card border-0 shadow-sm" data-preguntar="Se cobran <%= f.dinero(r.saldo) %> para liquidar la renta.">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-cash-coin"></i> Liquidar <%= f.dinero(r.saldo) %></h2>
+        <%- include('_pago', { prefijo: 'liquidar', monto: r.saldo }) %>
+        <button class="btn btn-marca w-100 mt-3"><i class="bi bi-check2-circle"></i> Cobrar el resto</button>
+      </div>
+    </form>
+    <% } %>
+
+    <% if (r.puede.entregar) { %>
+    <!-- US-52: entrega del salón -->
+    <form method="post" action="/salones/reservas/<%= r.id %>/entregar" class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-key"></i> Entregar el salón</h2>
+        <% if (r.saldo > 0) { %><p class="small text-danger mb-2">Primero liquida <%= f.dinero(r.saldo) %>: la fiesta no empieza sin pagar.</p><% } %>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" name="responsable_presente" value="1" id="ent-presente">
+          <label class="form-check-label small" for="ent-presente">Está presente <strong><%= r.responsable_nombre %></strong></label>
+        </div>
+        <label class="form-label small mb-1" for="ent-ine">Últimos 4 caracteres de su INE</label>
+        <input id="ent-ine" name="ine" maxlength="4" class="form-control text-uppercase mb-2" autocomplete="off">
+        <% if (r.fiesta_menores) { %>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" name="menores" value="1" id="ent-menores">
+          <label class="form-check-label small" for="ent-menores">Se queda a cargo de los menores: ninguno sale solo</label>
+        </div>
+        <% } %>
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" name="reglas" value="1" id="ent-reglas">
+          <label class="form-check-label small" for="ent-reglas">Sin vendedores externos ni grupos musicales; se entregó la bocina</label>
+        </div>
+        <button class="btn btn-marca w-100"><i class="bi bi-door-open"></i> Entregar salón</button>
+      </div>
+    </form>
+    <% } %>
+
+    <% if (r.puede.recibir) { %>
+    <!-- US-48/49: recibir el salón y decidir la cuota -->
+    <form method="post" action="/salones/reservas/<%= r.id %>/recibir" class="card border-0 shadow-sm" id="form-recibir"
+          data-cuota="<%= r.cuota_garantia %>" data-paga="<%= r.cliente_nombre %>" data-medio="<%= medios[r.medio_cuota] %>" data-preguntar="">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-clipboard-check"></i> Recibir el salón</h2>
+        <div class="btn-group w-100 mb-2" role="group" aria-label="Cómo se entregó">
+          <input type="radio" class="btn-check" name="resultado" id="rec-limpio" value="limpio">
+          <label class="btn btn-outline-success" for="rec-limpio">Limpio</label>
+          <input type="radio" class="btn-check" name="resultado" id="rec-sucio" value="sucio">
+          <label class="btn btn-outline-warning" for="rec-sucio">Sucio</label>
+          <input type="radio" class="btn-check" name="resultado" id="rec-danos" value="danos">
+          <label class="btn btn-outline-danger" for="rec-danos">Daños</label>
+        </div>
+        <div class="campo-descripcion d-none mb-2">
+          <label class="form-label small mb-1" for="rec-desc">¿Qué pasó?</label>
+          <input id="rec-desc" name="descripcion" maxlength="255" class="form-control" placeholder="Basura sin recoger, mesa rota...">
+        </div>
+        <div class="campo-costo d-none mb-2">
+          <label class="form-label small mb-1" for="rec-costo">Costo de reparar</label>
+          <div class="input-group"><span class="input-group-text">$</span><input id="rec-costo" name="costo" type="number" min="1" step="0.5" class="form-control"></div>
+        </div>
+        <p class="small fw-semibold que-pasa mb-3"></p>
+        <button class="btn btn-marca w-100"><i class="bi bi-check2-all"></i> Recibir y cerrar</button>
+      </div>
+    </form>
+    <% } %>
+
+    <% if (r.puede.cobrarDanos) { %>
+    <form method="post" action="/salones/reservas/<%= r.id %>/cobrar-danos" class="card border-0 shadow-sm" data-preguntar="Se cobran <%= f.dinero(r.cargo_pendiente) %> al responsable por los daños.">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-tools"></i> Cobrar daños: <%= f.dinero(r.cargo_pendiente) %></h2>
+        <p class="small text-body-secondary">Lo paga el responsable, <%= r.responsable_nombre %>.</p>
+        <%- include('_pago', { prefijo: 'danos', monto: r.cargo_pendiente }) %>
+        <button class="btn btn-marca w-100 mt-3">Cobrar cargo</button>
+      </div>
+    </form>
+    <% } %>
+
+    <% if (r.puede.cancelarAlimentos) { %>
+    <!-- US-50 -->
+    <form method="post" action="/salones/reservas/<%= r.id %>/cancelar-alimentos" class="card border-0 shadow-sm"
+          data-preguntar="Se cancelan todos los alimentos; si ya se pagó de más, se devuelve a <%= r.cliente_nombre %> en <%= medios[r.medio_pago] %>.">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-2"><i class="bi bi-x-octagon"></i> Cancelar alimentos</h2>
+        <p class="small text-body-secondary">Se puede hasta un día antes del evento, antes de prepararlos. El evento queda sin alimentos.</p>
+        <label class="form-label small mb-1" for="can-motivo">Motivo</label>
+        <input id="can-motivo" name="motivo" maxlength="255" class="form-control mb-3" required>
+        <button class="btn btn-outline-danger w-100">Cancelar alimentos</button>
+      </div>
+    </form>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/pie', { scriptsExtra: ['/js/salones.js'] }) %>

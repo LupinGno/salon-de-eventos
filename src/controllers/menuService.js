@@ -1,6 +1,4 @@
-// Reglas del menú que NO dependen de la pantalla (US-08, US-09, US-12, US-13, US-14, US-15).
-// La caja (Sprint 4) usará estas mismas funciones: así un producto inactivo
-// se rechaza en el servidor aunque alguien lo mande a mano.
+// Reglas del menú 
 const conexion = require('../database/db')
 
 class ErrorNegocio extends Error {
@@ -22,8 +20,7 @@ const SQL_PRODUCTO = `
       LEFT JOIN imagenes i ON i.id = p.imagen_id
       LEFT JOIN temporadas t ON t.id = p.temporada_id`
 
-// ¿Se puede vender HOY? Devuelve { vendible, motivo }
-// p trae `vencido` y `hoy` calculados por MySQL (ver SQL_PRODUCTO)
+// lo que se puede vender, con sus ingredientes, extras, tamaños y estilos
 function estadoProducto(p) {
     const hoy = p.hoy
     if (!p.activo) {
@@ -38,7 +35,7 @@ function estadoProducto(p) {
     return { vendible: true, motivo: null }
 }
 
-// Un estilo de temporada solo se ofrece dentro de sus fechas
+// estilo disponible hoy
 function estiloDisponible(e, hoy) {
     if (!e.activo) return false
     if (e.temporada_id && (!e.temporada_activa || hoy < e.fecha_inicio || hoy > e.fecha_fin)) return false
@@ -49,12 +46,13 @@ async function detalleProducto(id) {
     const [[producto]] = await conexion.query(`${SQL_PRODUCTO} WHERE p.id = ?`, [id])
     if (!producto) return null
 
+    // cantidad de cada ingrediente que se gasta por unidad del producto, y si hay suficiente stock
     const [ingredientes] = await conexion.query(
-        `SELECT pi.ingrediente_id AS id, i.nombre, pi.tipo
+        `SELECT pi.ingrediente_id AS id, i.nombre, pi.tipo, pi.cantidad, i.unidad, i.stock
            FROM producto_ingredientes pi JOIN ingredientes i ON i.id = pi.ingrediente_id
           WHERE pi.producto_id = ? ORDER BY pi.tipo, i.nombre`, [id])
     const [extras] = await conexion.query(
-        `SELECT pe.ingrediente_id AS id, i.nombre, pe.precio
+        `SELECT pe.ingrediente_id AS id, i.nombre, pe.precio, pe.cantidad, i.unidad, i.stock
            FROM producto_extras pe JOIN ingredientes i ON i.id = pe.ingrediente_id
           WHERE pe.producto_id = ? ORDER BY i.nombre`, [id])
     const [estilos] = await conexion.query(
@@ -68,9 +66,19 @@ async function detalleProducto(id) {
 
     estilos.forEach(e => { e.disponible = estiloDisponible(e, producto.hoy) })
 
+    // minimo para vender el producto mas chico
+    const factorMinimo = tamanos.length ? Math.min(...tamanos.map(t => Number(t.factor_receta) || 1)) : 1
+    const alcanza = (i, factor) => i.stock === null || Number(i.stock) + 0.001 >= Number(i.cantidad) * factor
+    ingredientes.forEach(i => { i.agotado = !alcanza(i, factorMinimo) })
+    extras.forEach(x => { x.agotado = !alcanza(x, 1) })
+    const sinFijo = ingredientes.filter(i => i.tipo === 'fijo' && i.agotado).map(i => i.nombre)
+
+    let estado = estadoProducto(producto)
+    if (estado.vendible && sinFijo.length) estado = { vendible: false, motivo: `Agotado: no hay ${sinFijo.join(', ')}`, agotado: true }
+
     return {
         ...producto,
-        ...estadoProducto(producto),
+        ...estado,
         fijos: ingredientes.filter(i => i.tipo === 'fijo'),
         moviles: ingredientes.filter(i => i.tipo === 'movil'),
         extras, estilos, tamanos,
@@ -78,7 +86,18 @@ async function detalleProducto(id) {
     }
 }
 
-// Menú completo con el estado de cada producto
+// cuanto gasta una unidad de cada ingrediente 
+function consumoDeUnidad(p, tamano, quitar, extras) {
+    const factor = tamano ? Number(tamano.factor_receta) || 1 : 1
+    const consumo = new Map()
+    const sumar = (i, cantidad) => consumo.set(i.id, { ingrediente_id: i.id, nombre: i.nombre,
+        cantidad: Math.round(((consumo.get(i.id)?.cantidad || 0) + cantidad) * 100) / 100 })
+    for (const i of [...p.fijos, ...p.moviles]) if (!quitar.includes(i.id)) sumar(i, Number(i.cantidad) * factor)
+    for (const x of p.extras) if (extras.includes(x.id)) sumar(x, Number(x.cantidad))
+    return [...consumo.values()]
+}
+
+// Menú completo 
 async function menuCompleto() {
     const [productos] = await conexion.query(`${SQL_PRODUCTO} ORDER BY c.orden, p.nombre`)
     const detalles = []
@@ -86,8 +105,7 @@ async function menuCompleto() {
     return detalles
 }
 
-// US-14: valida un artículo como lo mandaría la caja y calcula su precio.
-// item = { producto_id, estilo_id, tamano_id, quitar: [ingrediente_id], extras: [ingrediente_id] }
+// valida un artículo como lo mandaría la caja y calcula su precio.
 async function cotizar(item) {
     const id = Number(item.producto_id)
     if (!Number.isInteger(id) || id <= 0) throw new ErrorNegocio('Falta el producto.', 422)
@@ -97,10 +115,10 @@ async function cotizar(item) {
     if (!p.vendible) throw new ErrorNegocio(`"${p.nombre}" no se puede vender: ${p.motivo}.`, 409)
 
     const desglose = []
-    const modificaciones = []   // para guardar en articulo_modificaciones (Sprint 4)
+    const modificaciones = []   
     let precio, tamanoElegido = null, estiloElegido = null
 
-    // Tamaño: obligatorio si el producto tiene tamaños
+    // Tamaño
     if (p.tamanos.length) {
         const tamano = p.tamanos.find(t => t.id === Number(item.tamano_id))
         if (!tamano) throw new ErrorNegocio(`Elige un tamaño válido para "${p.nombre}".`, 422)
@@ -112,7 +130,7 @@ async function cotizar(item) {
         desglose.push({ concepto: p.nombre, importe: p.precio_base })
     }
 
-    // Estilo: obligatorio si el producto tiene estilos
+    // Estilo
     const estilosDisponibles = p.estilos.filter(e => e.disponible)
     if (p.estilos.length) {
         const estilo = p.estilos.find(e => e.id === Number(item.estilo_id))
@@ -127,7 +145,7 @@ async function cotizar(item) {
         }
     }
 
-    // Quitar ingredientes: solo móviles, y nunca cambia el precio (US-08, US-09)
+    // Quitar ingredientes
     const quitar = [...new Set((item.quitar || []).map(Number))]
     for (const ingId of quitar) {
         if (!p.permite_quitar) throw new ErrorNegocio(`En ${p.categoria} no se pueden quitar ingredientes.`, 422)
@@ -139,17 +157,18 @@ async function cotizar(item) {
         modificaciones.push({ ingrediente_id: movil.id, tipo: 'quitar', nombre: movil.nombre, precio: 0 })
     }
 
-    // Extras: cada uno se cobra (US-09)
+    // Extras
     const extras = [...new Set((item.extras || []).map(Number))]
     for (const ingId of extras) {
         const extra = p.extras.find(e => e.id === ingId)
         if (!extra) throw new ErrorNegocio(`Ese extra no está disponible para ${p.nombre}.`, 422)
+        if (extra.agotado) throw new ErrorNegocio(`Ya no hay ${extra.nombre} para agregar como extra.`, 409)
         precio += extra.precio
         desglose.push({ concepto: `Extra ${extra.nombre}`, importe: extra.precio })
         modificaciones.push({ ingrediente_id: extra.id, tipo: 'extra', nombre: extra.nombre, precio: extra.precio })
     }
 
-    // Nombre como se vende: "Pizza Familiar · Hawaiana"
+    // Nombre como se vende
     const descripcion = [p.nombre + (tamanoElegido ? ` ${tamanoElegido.nombre}` : ''), estiloElegido && estiloElegido.nombre]
         .filter(Boolean).join(' · ')
 
@@ -159,6 +178,7 @@ async function cotizar(item) {
         tamano_id: tamanoElegido ? tamanoElegido.id : null,
         descripcion,
         modificaciones,
+        consumo: consumoDeUnidad(p, tamanoElegido, quitar, extras),   // Sprint 7: lo que se descuenta del inventario
         producto: p.nombre,
         piezas: p.piezas_por_orden,
         va_a_cocina: Boolean(p.requiere_preparacion),

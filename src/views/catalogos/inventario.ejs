@@ -1,0 +1,64 @@
+<%- include('../partials/encabezado') %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <h1 class="h3 mb-0">Inventario de ingredientes</h1>
+  <p class="text-body-secondary mb-0">El stock baja solo con cada venta, según la receta. Aquí registras lo que llega (entradas), lo que se echa a perder (mermas) y el conteo físico (ajustes).</p>
+</div>
+
+<%- include('_nav') %>
+<%- include('../partials/errores', { errores }) %>
+
+<div class="d-flex flex-wrap gap-2 mb-3" aria-label="Resumen del inventario">
+  <span class="badge text-bg-danger fs-6 fw-normal"><i class="bi bi-slash-circle"></i> Agotados: <strong><%= cuenta.agotado %></strong></span>
+  <span class="badge text-bg-warning fs-6 fw-normal"><i class="bi bi-exclamation-triangle"></i> Surtir pronto: <strong><%= cuenta.bajo %></strong></span>
+  <span class="badge text-bg-success fs-6 fw-normal"><i class="bi bi-check2-circle"></i> Suficiente: <strong><%= cuenta.ok %></strong></span>
+  <span class="badge text-bg-light border fs-6 fw-normal">Sin control: <strong><%= cuenta.libre %></strong></span>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr><th scope="col">Ingrediente</th><th scope="col">Stock</th><th scope="col">Mínimo</th><th scope="col">Estado</th><th scope="col">Usado hoy</th><th scope="col" style="min-width:420px">Registrar</th><th scope="col"></th></tr>
+      </thead>
+      <tbody>
+      <% ingredientes.forEach(i => { const controlado = i.stock !== null %>
+        <tr>
+          <td class="fw-semibold"><%= i.nombre %><% if (!i.activo) { %> <span class="badge text-bg-secondary">inactivo</span><% } %>
+            <div class="small text-body-secondary fw-normal"><%= i.usos %> receta(s) o extra(s)</div></td>
+          <td class="text-nowrap">
+            <% if (controlado) { const pct = Math.min(100, Math.round(100 * Number(i.stock) / Math.max(Number(i.stock_minimo) * 3, 1))) %>
+              <strong><%= t(i.stock, i.unidad) %></strong>
+              <div class="progress barra-stock mt-1" role="progressbar" aria-label="Nivel de stock" aria-valuenow="<%= pct %>" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar <%= i.estado.clave === 'ok' ? 'bg-success' : i.estado.clave === 'bajo' ? 'bg-warning' : 'bg-danger' %>" style="width: <%= pct %>%"></div>
+              </div>
+            <% } else { %><span class="text-body-secondary">—</span><% } %>
+          </td>
+          <td class="text-nowrap"><%= controlado ? t(i.stock_minimo, i.unidad) : '—' %></td>
+          <td><span class="badge <%= i.estado.clase %>"><%= i.estado.texto %></span></td>
+          <td class="text-nowrap"><%= Number(i.usado_hoy) ? t(i.usado_hoy, i.unidad) : '—' %></td>
+          <td>
+            <% if (controlado) { %>
+            <form action="/catalogos/inventario/<%= i.id %>/movimiento" method="post" class="d-flex gap-1 align-items-center">
+              <select name="tipo" class="form-select form-select-sm w-auto" aria-label="Tipo de movimiento">
+                <option value="entrada">+ Entrada</option><option value="merma">− Merma</option><option value="ajuste">= Conteo</option>
+              </select>
+              <div class="input-group input-group-sm flex-nowrap" style="width:170px">
+                <input name="cantidad" type="number" step="0.01" min="0" class="form-control" required aria-label="Cantidad">
+                <span class="input-group-text"><%= i.unidad_corta %></span>
+              </div>
+              <input name="nota" class="form-control form-control-sm flex-grow-1" maxlength="160" placeholder="Proveedor o motivo" aria-label="Nota o motivo">
+              <button class="btn btn-sm btn-marca" title="Registrar"><i class="bi bi-check-lg"></i></button>
+            </form>
+            <% } else { %><span class="small text-body-secondary">Actívalo en el historial para controlar su stock</span><% } %>
+          </td>
+          <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="/catalogos/inventario/<%= i.id %>" title="Historial y configuración"><i class="bi bi-clock-history"></i></a></td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<p class="small text-body-secondary mt-2"><strong>Entrada</strong> suma lo que llegó. <strong>Merma</strong> resta lo que se tiró (pide motivo). <strong>Conteo</strong>: escribe lo que contaste en físico y el sistema registra la diferencia.</p>
+
+<%- include('../partials/pie') %>

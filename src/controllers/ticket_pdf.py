@@ -86,9 +86,11 @@ def renglones_del_ticket(t):
         agregar('', '', 'linea')
         agregar(f"Cuenta de la mesa: {t['cuenta']['comandas']} comandas", dinero(t['cuenta']['total']), 'negrita')
     if t.get('estado') == 'cancelada':
-        agregar('COMANDA CANCELADA — sin reembolso', '', 'negrita')
+        agregar('COMANDA CANCELADA', '', 'negrita')
+    if t.get('reembolsado'):
+        agregar('Reembolso', '-' + dinero(t['reembolsado']), 'negrita')
     agregar('', '', 'linea')
-    agregar('Pagado al ordenar. Los alimentos no tienen reembolso.', '', 'centro_chico')
+    agregar('Pagado al ordenar. Solo se reembolsa lo que no se empezó a preparar.', '', 'centro_chico')
     agregar('¡Gracias por tu visita!', '', 'centro')
     return r
 

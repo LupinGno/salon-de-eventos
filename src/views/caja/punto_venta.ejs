@@ -28,10 +28,12 @@
     <div class="row g-3" id="rejilla-productos">
       <% productos.forEach(p => { %>
       <div class="col-6 col-md-4 col-xxl-3" data-producto-tarjeta data-categoria="<%= p.categoria %>" data-nombre="<%= p.nombre.toLowerCase() %>">
-        <button type="button" class="card tarjeta-pos border-0 shadow-sm h-100 w-100 text-start p-0" data-abrir-producto="<%= p.id %>">
+        <button type="button" class="card tarjeta-pos border-0 shadow-sm h-100 w-100 text-start p-0 <%= p.agotado ? 'agotado' : '' %>" data-abrir-producto="<%= p.id %>" <%= p.agotado ? 'disabled' : '' %> <% if (p.agotado) { %>title="<%= p.agotado %>"<% } %>>
+          <% if (p.agotado) { %><span class="badge text-bg-danger sello-agotado"><i class="bi bi-slash-circle"></i> Agotado</span><% } %>
           <% if (p.imagen) { %><img src="<%= p.imagen %>" alt="" class="img-pos"><% } else { %><div class="img-pos sin-imagen d-grid place-items-center"><i class="bi bi-image"></i></div><% } %>
           <span class="card-body p-2 d-block">
             <span class="d-block fw-semibold lh-sm"><%= p.nombre %></span>
+            <% if (p.agotado) { %><span class="d-block small text-danger lh-sm"><%= p.agotado.replace('Agotado: ', '') %></span><% } %>
             <span class="d-flex justify-content-between align-items-center mt-1 small">
               <span class="fw-semibold"><%= p.tamanos.length || p.estilos.some(e => e.precio_extra > 0) ? 'desde ' : '' %><%= f.dinero(p.precio_desde) %></span>
               <% if (p.va_a_cocina) { %><span class="badge text-bg-warning-subtle border border-warning-subtle text-warning-emphasis" title="Se prepara en cocina"><i class="bi bi-fire"></i></span>

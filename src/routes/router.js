@@ -5,6 +5,9 @@ const authController = require('../controllers/authController')
 const usuariosController = require('../controllers/usuariosController')
 const productos = require('../controllers/productosController')
 const catalogos = require('../controllers/catalogosController')
+const inventarioCtl = require('../controllers/inventarioController')
+const salonesCtl = require('../controllers/salonesController')
+const reservasCtl = require('../controllers/reservasController')
 const rentas = require('../controllers/rentasCatalogoController')
 const api = require('../controllers/apiController')
 const cajaCtl = require('../controllers/cajaController')
@@ -16,16 +19,25 @@ const formatos = require('../controllers/formatos')
 
 const soloAdmin = [autenticado, permitirRoles(ROLES.ADMIN)]
 const catalogo = [autenticado, permitirModulo('catalogos')]
+const enSalones = [autenticado, permitirModulo('salones')]
 const conImagen = campoImagen('archivo')
 
-// Mensajes de éxito comunes (?ok=...)
+// Mensajes de éxito comunes
 const MENSAJES = {
     creado: 'Se creó correctamente.', guardado: 'Cambios guardados.', eliminado: 'Se eliminó correctamente.',
     baja: 'El producto se dio de baja: ya no se puede vender.', alta: 'El producto volvió a estar a la venta.',
     estilo: 'Estilo guardado.', tamano: 'Tamaño guardado.', mesas: 'Mesas añadidas.', imagen: 'Imagen subida.',
     permisos: 'Permisos actualizados; aplican desde la siguiente página que abra cada usuario.',
     'mesa-liberada': 'Mesa liberada: su cuenta quedó cerrada.',
-    cancelada: 'Cancelación aprobada. No hay reembolso.',
+    cancelada: 'Cancelación aprobada.',
+    'cancelada-reembolso': 'Cancelación aprobada con reembolso: devuelve el dinero por el mismo medio con que pagó.',
+    movimiento: 'Movimiento de inventario registrado.',
+    'reserva-creada': 'Reserva guardada con su contrato firmado.',
+    'reserva-liquidada': 'Renta liquidada: ya se puede entregar el salón el día del evento.',
+    'alimentos-cancelados': 'Alimentos cancelados. Si hubo devolución, aparece en los pagos con el medio y la persona.',
+    'salon-entregado': 'Salón entregado al responsable.',
+    'salon-recibido': 'Salón recibido. Revisa en los pagos si hay cuota que devolver o cargo por daños.',
+    'danos-cobrados': 'Cargo por daños cobrado al responsable.',
     'cancelacion-solicitada': 'Solicitud enviada: un administrador debe aprobarla.',
     'cancelacion-rechazada': 'La solicitud de cancelación se rechazó.',
     'no-existe': 'Ese registro no existe.', 'en-uso': 'No se puede eliminar porque ya tiene movimientos; dalo de baja.'
@@ -40,17 +52,22 @@ router.use((req, res, next) => {
     next()
 })
 
-// ---------- Públicas ----------
+// Públicas
 router.get('/login', soloInvitados, authController.vistaLogin)
 router.post('/login', authController.login)
 router.get('/register', soloInvitados, authController.vistaRegistro)
 router.post('/register', authController.registro)
 router.get('/logout', authController.logout)
 
-// ---------- Inicio ----------
-router.get('/', autenticado, (req, res) => res.render('index', { titulo: 'Inicio' }))
+// Inicio
+router.get('/', autenticado, async (req, res, next) => {
+    try {
+        const stockBajo = req.usuario.modulos.includes('catalogos') ? await require('../controllers/inventarioService').alertas() : []
+        res.render('index', { titulo: 'Inicio', stockBajo })
+    } catch (e) { next(e) }
+})
 
-// ---------- Módulo 0: usuarios (solo Administrador) ----------
+// usuarios
 router.get('/usuarios', soloAdmin, usuariosController.lista)
 router.get('/usuarios/nuevo', soloAdmin, usuariosController.formNuevo)
 router.post('/usuarios', soloAdmin, usuariosController.crear)
@@ -58,7 +75,7 @@ router.get('/usuarios/:id/editar', soloAdmin, usuariosController.formEditar)
 router.post('/usuarios/:id', soloAdmin, usuariosController.actualizar)
 router.post('/usuarios/:id/eliminar', soloAdmin, usuariosController.eliminar)
 
-// ---------- Módulo 1: administración y catálogos ----------
+// administración y catálogos
 router.get('/catalogos', catalogo, catalogos.inicio)
 
 // Recetas
@@ -82,6 +99,24 @@ router.get('/catalogos/ingredientes', catalogo, catalogos.ingredientes)
 router.post('/catalogos/ingredientes', catalogo, catalogos.guardarIngrediente)
 router.post('/catalogos/ingredientes/:id', catalogo, catalogos.guardarIngrediente)
 router.post('/catalogos/ingredientes/:id/eliminar', catalogo, catalogos.eliminarIngrediente)
+//renta de salones 
+router.get('/salones', enSalones, salonesCtl.disponibilidad)
+router.get('/salones/reservar', enSalones, reservasCtl.formulario)
+router.post('/salones/reservas', enSalones, reservasCtl.crear)
+router.get('/salones/reservas', enSalones, reservasCtl.lista)
+router.get('/salones/reservas/:id', enSalones, reservasCtl.detalle)
+router.post('/salones/reservas/:id/liquidar', enSalones, reservasCtl.liquidar)
+router.post('/salones/reservas/:id/cancelar-alimentos', enSalones, reservasCtl.cancelarAlimentos)
+router.post('/salones/reservas/:id/entregar', enSalones, reservasCtl.entregar)
+router.post('/salones/reservas/:id/recibir', enSalones, reservasCtl.recibir)
+router.post('/salones/reservas/:id/cobrar-danos', enSalones, reservasCtl.cobrarDanos)
+router.get('/salones/reservas/:id/contrato.pdf', enSalones, reservasCtl.contrato)
+router.get('/salones/reservas/:id/comprobante.pdf', enSalones, reservasCtl.comprobante)
+// inventario de ingredientes
+router.get('/catalogos/inventario', catalogo, inventarioCtl.vista)
+router.get('/catalogos/inventario/:id', catalogo, inventarioCtl.historial)
+router.post('/catalogos/inventario/:id/movimiento', catalogo, inventarioCtl.movimiento)
+router.post('/catalogos/inventario/:id/configurar', catalogo, inventarioCtl.configurar)
 
 // Temporadas
 router.get('/catalogos/temporadas', catalogo, catalogos.temporadas)
@@ -123,17 +158,17 @@ router.get('/catalogos/permisos', soloAdmin, catalogos.permisos)
 router.post('/catalogos/permisos', soloAdmin, catalogos.guardarPermisos)
 router.get('/catalogos/menu', catalogo, catalogos.vistaMenu)
 
-// ---------- Consultas (Cliente) ----------
+//Consultas 
 router.get('/consultas', autenticado, permitirModulo('consultas'), rentas.consultas)
 
-// ---------- API para la caja (Sprint 4) ----------
+//API para la caja 
 const apiCaja = [autenticado, permitirModulo('caja-snacks', 'catalogos')]
 router.get('/api/menu', apiCaja, api.menu)
 router.get('/api/mesas', apiCaja, api.mesas)
 router.get('/api/productos/:id', apiCaja, api.producto)
 router.post('/api/cotizar', apiCaja, api.cotizar)
 
-// ---------- Punto de venta y comandas (Sprint 4: US-21 a US-31) ----------
+//Punto de venta y comandas
 const enCaja = [autenticado, permitirModulo('caja-snacks')]
 router.get('/caja', enCaja, cajaCtl.puntoDeVenta)
 router.post('/caja/comandas', enCaja, cajaCtl.registrar)
@@ -147,7 +182,7 @@ router.post('/caja/cuentas/:id/cerrar', enCaja, cajaCtl.cerrarCuenta)
 router.get('/caja/tickets/:id', enCaja, cajaCtl.ticket)
 router.get('/caja/tickets/:id/pdf', enCaja, cajaCtl.ticketPdf)
 
-// ---------- Módulo 3: cocina y recepción (Sprints 5 y 6: US-32 a US-37) ----------
+// cocina y recepción
 const enCocina = [autenticado, permitirModulo('cocina')]
 router.get('/cocina', enCocina, cocinaCtl.monitor)
 router.post('/cocina/articulos/:id/:accion', enCocina, cocinaCtl.cambiarArticulo)
@@ -155,13 +190,13 @@ router.post('/cocina/comandas/:id/lista', enCocina, cocinaCtl.comandaLista)
 router.get('/caja/entregas', enCaja, cocinaCtl.entregas)
 router.post('/caja/articulos/:id/entregar', enCaja, cocinaCtl.entregarArticulo)
 router.post('/caja/comandas/:id/entregar', enCaja, cocinaCtl.entregarComanda)
-// Sprint 6: avisos a recepción (US-35), control de pendientes (US-37) e historial de entregas (US-36)
+//avisos a recepción 
 router.get('/caja/avisos', enCaja, cocinaCtl.avisos)
 router.post('/caja/avisos/:id/visto', enCaja, cocinaCtl.avisoVisto)
 router.get('/caja/pendientes', enCaja, cocinaCtl.pendientes)
 router.get('/caja/entregadas', enCaja, cocinaCtl.entregadas)
 
-// ---------- Módulos de los siguientes sprints ----------
+//Módulos de los siguientes sprints 
 router.get('/modulos/:clave', autenticado, (req, res, next) => {
     const modulo = buscarModulo(req.params.clave)
     if (!modulo) return next() // → 404

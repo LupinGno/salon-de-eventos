@@ -1,0 +1,91 @@
+<%- include('../partials/encabezado') %>
+<%
+const tipos = { entrada: ['Entrada', 'text-bg-success'], venta: ['Venta', 'text-bg-primary'], devolucion: ['Devolución', 'text-bg-info'], ajuste: ['Conteo', 'text-bg-secondary'], merma: ['Merma', 'text-bg-danger'] }
+const controlado = ing.stock !== null
+%>
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <a href="/catalogos/inventario" class="small"><i class="bi bi-arrow-left"></i> Inventario</a>
+    <h1 class="h3 mb-0"><%= ing.nombre %></h1>
+    <p class="text-body-secondary mb-0"><%= controlado ? `Stock: ${t(ing.stock, ing.unidad)} · mínimo ${t(ing.stock_minimo, ing.unidad)}` : 'Sin control de stock' %> · <span class="badge <%= ing.estado.clase %>"><%= ing.estado.texto %></span></p>
+  </div>
+</div>
+
+<%- include('_nav') %>
+<%- include('../partials/errores', { errores }) %>
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Configuración</h2>
+        <form action="/catalogos/inventario/<%= ing.id %>/configurar" method="post" class="d-grid gap-3">
+          <div>
+            <label class="form-label" for="unidad">Unidad</label>
+            <select id="unidad" name="unidad" class="form-select">
+              <option value="pieza" <%= ing.unidad === 'pieza' ? 'selected' : '' %>>Pieza</option>
+              <option value="g" <%= ing.unidad === 'g' ? 'selected' : '' %>>Gramos</option>
+              <option value="ml" <%= ing.unidad === 'ml' ? 'selected' : '' %>>Mililitros</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="stock_minimo">Avisar cuando baje de</label>
+            <input id="stock_minimo" name="stock_minimo" type="number" step="0.01" min="0" class="form-control" value="<%= Number(ing.stock_minimo) %>">
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="controlar" name="controlar" value="1" <%= controlado ? 'checked' : '' %>>
+            <label class="form-check-label" for="controlar">Controlar stock</label>
+            <div class="form-text">Apágalo para cosas que no se cuentan (hielo, sal).</div>
+          </div>
+          <% if (!controlado) { %>
+          <div>
+            <label class="form-label" for="stock_inicial">Stock con el que arranca</label>
+            <input id="stock_inicial" name="stock_inicial" type="number" step="0.01" min="0" class="form-control" placeholder="0">
+          </div>
+          <% } %>
+          <button class="btn btn-marca"><i class="bi bi-check-lg"></i> Guardar</button>
+        </form>
+      </div>
+    </div>
+    <% if (controlado) { %>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Registrar movimiento</h2>
+        <form action="/catalogos/inventario/<%= ing.id %>/movimiento" method="post" class="d-grid gap-2">
+          <input type="hidden" name="volver" value="historial">
+          <select name="tipo" class="form-select" aria-label="Tipo">
+            <option value="entrada">+ Entrada (compra)</option><option value="merma">− Merma (se echó a perder)</option><option value="ajuste">= Conteo físico</option>
+          </select>
+          <div class="input-group"><input name="cantidad" type="number" step="0.01" min="0" class="form-control" required aria-label="Cantidad"><span class="input-group-text"><%= ing.unidad_corta %></span></div>
+          <input name="nota" class="form-control" maxlength="160" placeholder="Proveedor, factura o motivo">
+          <button class="btn btn-marca"><i class="bi bi-check-lg"></i> Registrar</button>
+        </form>
+      </div>
+    </div>
+    <% } %>
+  </div>
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body pb-0"><h2 class="h6 text-uppercase texto-seccion">Últimos movimientos</h2></div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th scope="col">Fecha</th><th scope="col">Tipo</th><th scope="col" class="text-end">Cantidad</th><th scope="col" class="text-end">Quedó</th><th scope="col">Detalle</th></tr></thead>
+          <tbody>
+          <% if (!movimientos.length) { %><tr><td colspan="5" class="text-center text-body-secondary py-4">Sin movimientos todavía.</td></tr><% } %>
+          <% movimientos.forEach(m => { const [nombre, clase] = tipos[m.tipo] %>
+            <tr>
+              <td class="text-nowrap small"><%= f.fechaCorta(m.creado_en) %></td>
+              <td><span class="badge <%= clase %>"><%= nombre %></span></td>
+              <td class="text-end text-nowrap <%= Number(m.cantidad) < 0 ? 'text-danger' : 'text-success' %>"><%= Number(m.cantidad) > 0 ? '+' : '' %><%= t(m.cantidad, ing.unidad) %></td>
+              <td class="text-end text-nowrap"><%= t(m.stock_despues, ing.unidad) %></td>
+              <td class="small"><%= m.folio ? `Comanda #${m.folio}` : '' %><%= m.nota ? (m.folio ? ' · ' : '') + m.nota : '' %><%= m.usuario ? ` · ${m.usuario}` : '' %></td>
+            </tr>
+          <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/pie') %>

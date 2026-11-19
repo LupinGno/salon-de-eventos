@@ -1,0 +1,117 @@
+<%- include('../partials/encabezado') %>
+<%
+const tamanos = { chico: 'Chico', mediano: 'Mediano', grande: 'Grande' }
+const fechaLarga = iso => new Date(iso + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+%>
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <h1 class="h3 mb-0">Renta de salones</h1>
+  <p class="text-body-secondary mb-0">Consulta qué salón está libre en una fecha para cierto número de personas, el mobiliario que lleva y cuánto se paga para apartar.</p>
+</div>
+
+<%- include('_nav') %>
+<%- include('../partials/errores', { errores }) %>
+
+<div class="row g-4">
+  <div class="col-xl-4">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">¿Qué buscas?</h2>
+        <form method="get" action="/salones" class="d-grid gap-3 needs-validation" novalidate>
+          <div>
+            <label class="form-label" for="fecha">Fecha del evento</label>
+            <input id="fecha" name="fecha" type="date" class="form-control" value="<%= q.fecha %>" required>
+            <div class="invalid-feedback">Elige la fecha.</div>
+          </div>
+          <div>
+            <label class="form-label" for="personas">Personas</label>
+            <input id="personas" name="personas" type="number" min="1" max="1000" class="form-control" value="<%= q.personas %>" required>
+            <div class="invalid-feedback">Escribe cuántas personas (1 a 1000).</div>
+          </div>
+          <div>
+            <label class="form-label" for="tamano">Tamaño</label>
+            <select id="tamano" name="tamano" class="form-select">
+              <option value="">Cualquiera</option>
+              <% Object.entries(tamanos).forEach(([k, v]) => { %><option value="<%= k %>" <%= q.tamano === k ? 'selected' : '' %>><%= v %></option><% }) %>
+            </select>
+          </div>
+          <div class="btn-group" role="group" aria-label="Con o sin alimentos">
+            <input type="radio" class="btn-check" name="con_alimentos" id="sin-al" value="0" <%= q.con_alimentos !== '1' ? 'checked' : '' %>>
+            <label class="btn btn-outline-primary" for="sin-al"><i class="bi bi-bag-x"></i> Sin alimentos</label>
+            <input type="radio" class="btn-check" name="con_alimentos" id="con-al" value="1" <%= q.con_alimentos === '1' ? 'checked' : '' %>>
+            <label class="btn btn-outline-primary" for="con-al"><i class="bi bi-egg-fried"></i> Con alimentos</label>
+          </div>
+          <button class="btn btn-marca"><i class="bi bi-search"></i> Ver disponibilidad</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Próximos 30 días</h2>
+        <% if (!proximas.length) { %><p class="text-body-secondary mb-0">No hay salones rentados.</p><% } %>
+        <ul class="list-unstyled mb-0">
+          <% proximas.forEach(r => { %>
+          <li class="d-flex justify-content-between gap-2 py-2 border-bottom small">
+            <a href="/salones/reservas/<%= r.id %>"><strong><%= r.fecha.slice(8) %>/<%= r.fecha.slice(5, 7) %></strong> · <%= r.salon %></a>
+            <span class="text-body-secondary"><%= r.personas %> pers. · <%= r.estado %></span>
+          </li>
+          <% }) %>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-8">
+    <% if (!resultado) { %>
+      <div class="card border-0 shadow-sm"><div class="card-body p-5 text-center text-body-secondary">
+        <i class="bi bi-calendar2-week fs-1 d-block mb-2"></i>Elige la fecha y cuántas personas van para ver qué salones están libres.
+      </div></div>
+    <% } else { const c = resultado.consulta %>
+      <div class="d-flex flex-wrap align-items-baseline gap-2 mb-3">
+        <h2 class="h5 mb-0"><%= fechaLarga(c.fecha) %> · <%= c.personas %> personas</h2>
+        <span class="badge <%= resultado.disponibles ? 'text-bg-success' : 'text-bg-danger' %>"><%= resultado.disponibles %> disponible(s)</span>
+        <span class="small text-body-secondary"><%= c.conAlimentos ? 'Con alimentos' : 'Sin alimentos' %></span>
+      </div>
+      <% if (resultado.aviso) { %><div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> <%= resultado.aviso %></div><% } %>
+
+      <div class="row g-3">
+      <% resultado.salones.forEach(s => { const k = s.cotizacion, n = s.necesario %>
+        <div class="col-md-6">
+          <div class="card h-100 border-0 shadow-sm tarjeta-salon <%= s.disponible ? '' : 'no-disponible' %>">
+            <% if (s.imagen) { %><img src="<%= s.imagen %>" class="card-img-top img-salon" alt=""><% } %>
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <h3 class="h6 mb-1"><%= s.nombre %></h3>
+                <span class="badge <%= s.disponible ? 'text-bg-success' : 'text-bg-secondary' %>"><%= s.disponible ? 'Disponible' : 'No disponible' %></span>
+              </div>
+              <div class="small text-body-secondary mb-2"><%= tamanos[s.tamano] %> · aforo <%= s.aforo %> · <%= s.brincolines %> brincolín(es) incluido(s)</div>
+              <% if (!s.disponible) { %>
+                <div class="alert alert-light border small py-2 mb-0"><i class="bi bi-x-circle text-danger"></i> <%= s.motivo %></div>
+              <% } else { %>
+                <div class="small fw-semibold">Mobiliario (<%= porMesa %> personas por mesa)</div>
+                <ul class="small mb-2 ps-3">
+                  <li><%= n.sillas %> sillas <span class="text-body-secondary">de <%= s.tiene.sillas %></span></li>
+                  <li><%= n.mesas %> mesas y <%= n.manteles %> manteles blancos</li>
+                  <li>Bocina (sin música; no se permiten grupos musicales ni vendedores externos)</li>
+                  <% if (n.desechables) { %><li><%= n.desechables %> juegos de desechables</li><% } else { %><li>Sin desechables: el cliente trae su comida y deja limpio</li><% } %>
+                </ul>
+                <table class="table table-sm small mb-0">
+                  <tr><td>Renta</td><td class="text-end"><%= f.dinero(k.renta) %></td></tr>
+                  <tr><td>Cuota de garantía <span class="text-body-secondary">(se devuelve si se entrega limpio)</span></td><td class="text-end"><%= f.dinero(k.cuota) %></td></tr>
+                  <tr class="fw-semibold"><td><%= k.pago_total ? 'Pago total hoy (faltan 3 días o menos)' : 'Para apartar (50% de la renta + cuota)' %></td><td class="text-end"><%= f.dinero(k.anticipo) %></td></tr>
+                  <% if (!k.pago_total) { %><tr><td>Liquidar el resto antes del</td><td class="text-end"><%= k.fecha_limite.split('-').reverse().join('/') %></td></tr><% } %>
+                </table>
+                <a class="btn btn-marca w-100 mt-3" href="/salones/reservar?<%= new URLSearchParams({ salon_id: s.id, fecha: c.fecha, personas: c.personas, con_alimentos: c.conAlimentos ? 1 : 0 }) %>">
+                  <i class="bi bi-calendar-plus"></i> Reservar este salón</a>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+      </div>
+      <p class="small text-body-secondary mt-3"><i class="bi bi-info-circle"></i> Con alimentos, el precio final suma el menú del evento que se elija al reservar.</p>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/pie') %>

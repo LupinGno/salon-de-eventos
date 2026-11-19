@@ -9,7 +9,7 @@
     const dinero = n => '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 
-    // Filtro del menú 
+    // Filtro del menú
     let categoria = '', texto = ''
     const filtrar = () => document.querySelectorAll('[data-producto-tarjeta]').forEach(t => {
         const ok = (!categoria || t.dataset.categoria === categoria) && (!texto || t.dataset.nombre.includes(texto))
@@ -43,12 +43,14 @@
         cantidad: 1,
         tamano_id: p.tamanos.length ? p.tamanos[0].id : null,
         estilo_id: p.estilos.length ? p.estilos[0].id : null,
-        quitar: new Set(), extras: new Set()
+        // un ingrediente que se acabó ya viene quitado 
+        quitar: new Set(p.moviles.filter(m => m.agotado).map(m => m.id)), extras: new Set()
     })
 
+    // Modal para armar el platillo 
     const modalProducto = new bootstrap.Modal($('modal-producto'))
-    let actual = null        
-    let unidades = []          
+    let actual = null          
+    let unidades = []         
 
     document.addEventListener('click', e => {
         const b = e.target.closest('[data-abrir-producto]')
@@ -83,12 +85,12 @@
             const fijos = p.fijos.map(ing => `<span class="badge chip-fijo" title="Ingrediente básico: no se puede quitar"><i class="bi bi-lock-fill"></i> ${esc(ing.nombre)}</span>`).join(' ')
             const moviles = p.permite_quitar
                 ? p.moviles.map(ing => `
-                    <input type="checkbox" class="btn-check" id="mov-${i}-${ing.id}" data-u="${i}" data-quitar="${ing.id}" ${u.quitar.has(ing.id) ? '' : 'checked'}>
-                    <label class="btn btn-sm chip-toggle" for="mov-${i}-${ing.id}" title="Toca para quitarlo (no cambia el precio)">${esc(ing.nombre)}</label>`).join('')
+                    <input type="checkbox" class="btn-check" id="mov-${i}-${ing.id}" data-u="${i}" data-quitar="${ing.id}" ${u.quitar.has(ing.id) ? '' : 'checked'} ${ing.agotado ? 'disabled' : ''}>
+                    <label class="btn btn-sm chip-toggle" for="mov-${i}-${ing.id}" title="${ing.agotado ? 'Se acabó: va sin este ingrediente' : 'Toca para quitarlo (no cambia el precio)'}">${esc(ing.nombre)}${ing.agotado ? ' <small>(se acabó)</small>' : ''}</label>`).join('')
                 : p.moviles.map(ing => `<span class="badge chip-movil">${esc(ing.nombre)}</span>`).join(' ')
             const extras = p.extras.map(x => `
-                <input type="checkbox" class="btn-check" id="ext-${i}-${x.id}" data-u="${i}" data-extra="${x.id}" ${u.extras.has(x.id) ? 'checked' : ''}>
-                <label class="btn btn-sm chip-toggle-extra" for="ext-${i}-${x.id}">+ ${esc(x.nombre)} <small>${dinero(x.precio)}</small></label>`).join('')
+                <input type="checkbox" class="btn-check" id="ext-${i}-${x.id}" data-u="${i}" data-extra="${x.id}" ${u.extras.has(x.id) ? 'checked' : ''} ${x.agotado ? 'disabled' : ''}>
+                <label class="btn btn-sm chip-toggle-extra" for="ext-${i}-${x.id}">+ ${esc(x.nombre)} <small>${x.agotado ? 'agotado' : dinero(x.precio)}</small></label>`).join('')
 
             return `
             <div class="unidad-pos mb-3">
@@ -132,7 +134,7 @@
         $('unidades').lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     })
 
-    //Pedido
+    //Pedido 
     let pedido = []
     let siguiente = 1
 
@@ -215,7 +217,7 @@
     document.querySelectorAll('input[name="destino"]').forEach(r => r.addEventListener('change', revisarDestino))
     $('mesa').addEventListener('change', revisarDestino)
 
-    //Cobro 
+    // Cobro 
     const modalCobro = new bootstrap.Modal($('modal-cobro'))
     const medio = () => document.querySelector('input[name="medio"]:checked').value
 
@@ -285,9 +287,12 @@
                 headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
                 body: JSON.stringify(cuerpo)
             })
-            const respuesta = await r.json().catch(() => ({ error: 'Tu sesión terminó. Vuelve a iniciar sesión.' }))
+            const respuesta = await r.json().catch(() => ({}))
             if (!r.ok) {
-                error.textContent = respuesta.error || 'No se pudo registrar la comanda.'
+                error.textContent = r.status === 401 ? 'Tu sesión terminó. Vuelve a iniciar sesión (la página se recargará).'
+                    : r.status === 403 ? 'Este usuario no tiene permiso de caja. ¿Iniciaste sesión con otro usuario en otra pestaña?'
+                    : respuesta.error || `No se pudo registrar la comanda (error ${r.status}). Revisa la terminal del servidor.`
+                if (r.status === 401) setTimeout(() => location.assign('/login'), 2500)
                 error.classList.remove('d-none')
                 return
             }
@@ -304,7 +309,7 @@
                 confirmButtonColor: '#1b9ad6'
             })
             if (resultado.isConfirmed) window.open(`/caja/tickets/${respuesta.ticket_id}`, '_blank')
-            location.reload()   // nuevo pedido con las mesas y cuentas al día
+            location.reload()   
         } catch (e) {
             error.textContent = 'No hay conexión con el servidor.'
             error.classList.remove('d-none')

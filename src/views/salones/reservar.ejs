@@ -1,0 +1,208 @@
+<%- include('../partials/encabezado') %>
+<%
+const tamanos = { chico: 'Chico', mediano: 'Mediano', grande: 'Grande' }
+const fechaLarga = iso => new Date(iso + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+const n = s.necesario
+%>
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <h1 class="h3 mb-0">Reservar <%= s.nombre %></h1>
+  <p class="text-body-secondary mb-0"><%= fechaLarga(c.fecha) %> · <%= c.personas %> personas · <%= conAlimentos ? 'Con alimentos' : 'Sin alimentos' %></p>
+</div>
+
+<%- include('_nav') %>
+<div id="errores-reserva" class="alert alert-danger d-none" role="alert"></div>
+<% if (alimentosHoy) { %>
+<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Los alimentos se piden con anticipación (al menos un día antes). Para hoy la renta queda <strong>sin alimentos</strong>: el cliente trae su comida.</div>
+<% } %>
+
+<form id="form-reserva" class="row g-4" novalidate>
+  <div class="col-xl-8 d-grid gap-4">
+
+    <!-- 1. Evento -->
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><span class="paso">1</span> Evento</h2>
+        <div class="row g-3 align-items-center">
+          <div class="col-md-7">
+            <div class="fw-semibold"><%= s.nombre %> <span class="badge text-bg-light"><%= tamanos[s.tamano] %> · aforo <%= s.aforo %></span></div>
+            <div class="small text-body-secondary">
+              <%= n.sillas %> sillas, <%= n.mesas %> mesas y <%= n.manteles %> manteles blancos (<%= porMesa %> personas por mesa), bocina sin música<%= conAlimentos ? `, ${c.personas} juegos de desechables` : '' %>.
+            </div>
+          </div>
+          <div class="col-md-5">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="fiesta_menores" name="fiesta_menores" value="1">
+              <label class="form-check-label" for="fiesta_menores">Fiesta de menores</label>
+            </div>
+            <div class="small text-body-secondary">El responsable cuida que ningún menor salga solo.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Brincolines (US-44) -->
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-1"><span class="paso">2</span> Brincolines incluidos</h2>
+        <p class="small text-body-secondary mb-3">Este salón incluye hasta <strong><%= s.brincolines %></strong>. Solo aparecen los que están libres ese día.</p>
+        <% if (!brincolines.length) { %><p class="text-body-secondary mb-0">No hay brincolines libres para esa fecha.</p><% } %>
+        <div class="row g-3">
+          <% brincolines.forEach(b => { %>
+          <div class="col-6 col-lg-4">
+            <input type="checkbox" class="btn-check casilla-brincolin" id="br-<%= b.id %>" value="<%= b.id %>" autocomplete="off">
+            <label class="card h-100 tarjeta-eleccion" for="br-<%= b.id %>">
+              <% if (b.imagen) { %><img src="<%= b.imagen %>" class="card-img-top img-salon" alt=""><% } %>
+              <span class="card-body py-2">
+                <span class="d-block fw-semibold"><%= b.nombre %></span>
+                <span class="d-block small text-body-secondary"><%= Number(b.largo_m) %> × <%= Number(b.ancho_m) %> × <%= Number(b.alto_m) %> m</span>
+              </span>
+            </label>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+    </section>
+
+    <% if (conAlimentos) { %>
+    <!-- 3. Alimentos (US-41) -->
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-1"><span class="paso">3</span> Alimentos del evento</h2>
+        <p class="small text-body-secondary mb-3">Menú limitado: pizza entera, refresco en botella grande y hamburguesas con todo. Sin carta especial, pastel ni temporada.</p>
+        <div class="row g-2 align-items-end" id="nuevo-alimento">
+          <div class="col-md-4">
+            <label class="form-label small mb-1" for="al-producto">Platillo</label>
+            <select id="al-producto" class="form-select">
+              <% menuEventos.forEach(p => { %><option value="<%= p.id %>"><%= p.nombre %></option><% }) %>
+            </select>
+          </div>
+          <div class="col-md-3" id="al-col-tamano">
+            <label class="form-label small mb-1" for="al-tamano">Tamaño</label>
+            <select id="al-tamano" class="form-select"></select>
+          </div>
+          <div class="col-md-3" id="al-col-estilo">
+            <label class="form-label small mb-1" for="al-estilo">Sabor</label>
+            <select id="al-estilo" class="form-select"></select>
+          </div>
+          <div class="col-6 col-md-1">
+            <label class="form-label small mb-1" for="al-cantidad">Cant.</label>
+            <input id="al-cantidad" type="number" min="1" max="500" value="1" class="form-control">
+          </div>
+          <div class="col-6 col-md-1 d-grid">
+            <button type="button" class="btn btn-outline-primary" id="al-agregar" aria-label="Agregar platillo"><i class="bi bi-plus-lg"></i></button>
+          </div>
+        </div>
+        <div class="table-responsive mt-3">
+          <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Platillo</th><th class="text-end">Cant.</th><th class="text-end">Precio</th><th class="text-end">Importe</th><th></th></tr></thead>
+            <tbody id="lineas-alimentos"><tr class="sin-lineas"><td colspan="5" class="text-body-secondary">Agrega al menos un platillo.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    <% } %>
+
+    <!-- 4. Quién renta y paga (US-51) -->
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><span class="paso"><%= conAlimentos ? 4 : 3 %></span> Quién renta y paga</h2>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="cli-nombre">Nombre completo</label>
+            <input id="cli-nombre" class="form-control" maxlength="100" required autocomplete="off">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label" for="cli-telefono">Teléfono</label>
+            <input id="cli-telefono" class="form-control" inputmode="tel" maxlength="14" placeholder="10 dígitos" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label" for="cli-correo">Correo <span class="text-body-secondary small">(opcional)</span></label>
+            <input id="cli-correo" type="email" class="form-control" maxlength="100">
+          </div>
+        </div>
+        <p class="small text-body-secondary mt-2 mb-0"><i class="bi bi-info-circle"></i> Solo a esta persona se le devuelve la cuota, por el mismo medio con que pague.</p>
+      </div>
+    </section>
+
+    <!-- 5. Responsable (US-45) -->
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><span class="paso"><%= conAlimentos ? 5 : 4 %></span> Responsable del evento</h2>
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" id="resp-mismo">
+          <label class="form-check-label" for="resp-mismo">El responsable es la misma persona que paga</label>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6 solo-otro">
+            <label class="form-label" for="resp-nombre">Nombre completo</label>
+            <input id="resp-nombre" class="form-control" maxlength="100" autocomplete="off">
+          </div>
+          <div class="col-md-6 solo-otro">
+            <label class="form-label" for="resp-celular">Celular</label>
+            <input id="resp-celular" class="form-control" inputmode="tel" maxlength="14" placeholder="10 dígitos">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="resp-ine">INE: clave de elector</label>
+            <input id="resp-ine" class="form-control text-uppercase" maxlength="18" placeholder="18 letras y números" autocomplete="off">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="resp-nacimiento">Fecha de nacimiento</label>
+            <input id="resp-nacimiento" type="date" class="form-control">
+            <div class="form-text">Debe ser mayor de edad el día del evento.</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="resp-direccion">Dirección</label>
+            <input id="resp-direccion" class="form-control" maxlength="255" placeholder="Calle, número, colonia y ciudad">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Términos y firma (US-43, US-46) -->
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><span class="paso"><%= conAlimentos ? 6 : 5 %></span> Términos y condiciones</h2>
+        <ol class="small terminos mb-3">
+          <% terminos.forEach(t => { %><li><%= t %></li><% }) %>
+        </ol>
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" id="acepta">
+          <label class="form-check-label fw-semibold" for="acepta">El responsable leyó y acepta los términos y condiciones</label>
+        </div>
+        <div class="d-flex justify-content-between align-items-end mb-1">
+          <label class="form-label mb-0" for="firma">Firma del responsable</label>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="firma-borrar"><i class="bi bi-eraser"></i> Borrar</button>
+        </div>
+        <canvas id="firma" class="firma-lienzo" aria-label="Recuadro para firmar con el dedo o el mouse"></canvas>
+        <div class="form-text">Firma con el dedo (pantalla táctil) o con el mouse. Se agrega al contrato PDF.</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Cobro (US-47) -->
+  <div class="col-xl-4">
+    <div class="card border-0 shadow-sm resumen-fijo">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-receipt"></i> Cobro</h2>
+        <table class="table table-sm small mb-2">
+          <tr><td>Renta del salón</td><td class="text-end" id="r-renta"><%= f.dinero(k.renta) %></td></tr>
+          <% if (conAlimentos) { %><tr><td>Alimentos</td><td class="text-end" id="r-alimentos">$0.00</td></tr><% } %>
+          <tr class="fw-semibold"><td>Total de la renta</td><td class="text-end" id="r-precio"><%= f.dinero(k.precio) %></td></tr>
+          <tr><td><%= k.pago_total ? 'Se paga completo hoy (faltan 3 días o menos)' : 'Apartado (50%)' %></td><td class="text-end" id="r-pago-renta"><%= f.dinero(k.pago_renta) %></td></tr>
+          <tr><td>Cuota de garantía <span class="text-body-secondary">(se devuelve si queda limpio)</span></td><td class="text-end"><%= f.dinero(k.cuota) %></td></tr>
+          <tr class="fs-5 fw-bold"><td>Se cobra hoy</td><td class="text-end" id="r-hoy"><%= f.dinero(k.anticipo) %></td></tr>
+          <% if (!k.pago_total) { %><tr><td>Saldo a liquidar antes del <%= k.fecha_limite.split('-').reverse().join('/') %></td><td class="text-end" id="r-saldo"><%= f.dinero(k.saldo) %></td></tr><% } %>
+        </table>
+        <%- include('_pago', { prefijo: 'reserva', monto: k.anticipo }) %>
+        <button type="submit" class="btn btn-marca btn-lg w-100 mt-3" id="btn-reservar"><i class="bi bi-pen"></i> Confirmar y generar contrato</button>
+        <p class="small text-body-secondary mt-2 mb-0">Al confirmar se guarda la reserva, se cobra y se genera el contrato PDF con la firma.</p>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script type="application/json" id="datos-reserva"><%- JSON.stringify({
+  salon_id: s.id, fecha: c.fecha, personas: c.personas, con_alimentos: conAlimentos, max_brincolines: s.brincolines,
+  renta: k.renta, cuota: k.cuota, pago_total: k.pago_total, menu: menuEventos
+}).replace(/</g, '\\u003c') %></script>
+<%- include('../partials/pie', { scriptsExtra: ['/js/salones.js'] }) %>

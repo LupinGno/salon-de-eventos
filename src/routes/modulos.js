@@ -1,4 +1,4 @@
-// Roles del sistema (deben coincidir con la tabla `roles`)
+// Roles del sistema
 const ROLES = {
     ADMIN: 'Administrador',
     CAJERO: 'Cajero de snacks',
@@ -9,9 +9,7 @@ const ROLES = {
     CLIENTE: 'Cliente'
 }
 
-// Módulos del sistema. QUÉ ROL entra a cada uno ya no está aquí:
-// se guarda en la tabla `rol_modulos` y el administrador lo cambia en
-// Catálogos → Permisos por puesto (US-20).
+// Módulos del sistema.
 const MODULOS = [
     {
         clave: 'usuarios', titulo: 'Usuarios y roles', icono: 'people-fill', ruta: '/usuarios',
@@ -34,9 +32,9 @@ const MODULOS = [
         descripcion: 'Cola FIFO en vivo, aviso a recepción al instante, entregas con hora y control de pendientes.'
     },
     {
-        clave: 'salones', titulo: 'Renta de salones', icono: 'building',
-        entrega: 'Sprint 8 — jueves 12 nov',
-        descripcion: 'Disponibilidad, aforo, con o sin alimentos, contrato y cuotas.'
+        clave: 'salones', titulo: 'Renta de salones', icono: 'building', ruta: '/salones',
+        entrega: 'Sprint 8', listo: true,
+        descripcion: 'Disponibilidad, aforo y mobiliario; reserva con responsable, firma y contrato PDF; apartado, liquidación, entrega del salón y cuota de garantía.'
     },
     {
         clave: 'brincolines', titulo: 'Renta de brincolines', icono: 'balloon-fill',
@@ -60,7 +58,7 @@ const MODULOS = [
     }
 ]
 
-// Ruta de cada módulo: los que aún no están listos usan /modulos/<clave>
+// Ruta de cada módulo
 MODULOS.forEach(m => { if (!m.ruta) m.ruta = `/modulos/${m.clave}` })
 
 const CLAVES = MODULOS.map(m => m.clave)

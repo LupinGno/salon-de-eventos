@@ -1,6 +1,4 @@
-/* =====================================================================
-   Estética Frutiger Aero: cielo, agua, burbujas, vidrio y brillo
-   ===================================================================== */
+/* Frutiger Aero */
 :root {
   --cielo-1: #e8f7ff;
   --cielo-2: #a9dcf7;
@@ -469,3 +467,21 @@ img[src$=".svg"].img-pos { object-fit: contain; padding: .5rem; background: line
   .aviso-recepcion, .estado-conexion.en-vivo i { animation: none; }
 }
 .resumen-cocina .badge { padding: .55em .9em; }
+
+/* ---------- Sprint 7: inventario ---------- */
+.tarjeta-pos { position: relative; }
+.tarjeta-pos.agotado { opacity: .55; filter: grayscale(.7); cursor: not-allowed; }
+.sello-agotado { position: absolute; top: .5rem; left: .5rem; z-index: 2; }
+.barra-stock { height: .55rem; min-width: 90px; }
+.tarjeta-salon.no-disponible { opacity: .7; }
+.img-salon { height: 140px; object-fit: cover; }
+
+/* ---------- Sprint 8: reserva de salones ---------- */
+.paso { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; margin-right: .35rem; border-radius: 50%;
+        background: linear-gradient(#5cc4f5, #1b9ad6); color: #fff; font-size: .8rem; box-shadow: inset 0 1px 0 rgba(255,255,255,.6); }
+.tarjeta-eleccion { cursor: pointer; border: 2px solid transparent; transition: border-color .15s, box-shadow .15s; }
+.btn-check:checked + .tarjeta-eleccion { border-color: #1b9ad6; box-shadow: 0 0 0 .2rem rgba(27, 154, 214, .25); }
+.btn-check:disabled + .tarjeta-eleccion { opacity: .5; cursor: not-allowed; }
+.firma-lienzo { display: block; width: 100%; height: 180px; background: #fff; border: 2px dashed #8fc8ea; border-radius: .75rem; touch-action: none; cursor: crosshair; }
+.terminos li { margin-bottom: .35rem; }
+@media (min-width: 1200px) { .resumen-fijo { position: sticky; top: 4.5rem; } }

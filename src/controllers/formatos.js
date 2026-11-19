@@ -35,7 +35,7 @@ function fechaHora(v) {
     return `${m[1]} ${m[2]}:${m[3]}:00`
 }
 
-// 'YYYY-MM-DD HH:MM:SS' (como lo da MySQL) → valor para <input type="datetime-local">
+// 'YYYY-MM-DD HH:MM:SS' 
 const aInputFechaHora = v => (v ? String(v).slice(0, 16).replace(' ', 'T') : '')
 
 const dinero = n => '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

@@ -12,6 +12,15 @@
     <% } %>
 </div>
 
+<% if (typeof stockBajo !== 'undefined' && stockBajo.length) { %>
+<div class="alert alert-warning d-flex flex-wrap align-items-center gap-2" role="status">
+  <i class="bi bi-box-seam fs-5"></i>
+  <strong><%= stockBajo.length %> ingrediente(s) por surtir:</strong>
+  <span><%= stockBajo.slice(0, 6).map(i => `${i.nombre} (${Number(i.stock).toLocaleString('es-MX')} ${i.unidad_corta})`).join(', ') %><%= stockBajo.length > 6 ? '…' : '' %></span>
+  <a href="/catalogos/inventario" class="btn btn-sm btn-outline-dark ms-auto">Ver inventario</a>
+</div>
+<% } %>
+
 <h2 class="h6 text-uppercase text-body-secondary mb-3">Tus módulos</h2>
 <div class="row g-3">
     <% menu.forEach(m => { %>

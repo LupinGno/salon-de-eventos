@@ -1,0 +1,23 @@
+<%# Campos de cobro (US-31, US-47). prefijo distingue varios formularios en la misma página %>
+<div class="campos-pago" data-monto="<%= monto %>">
+  <div class="btn-group w-100 mb-2" role="group" aria-label="Medio de pago">
+    <input type="radio" class="btn-check" name="medio" id="<%= prefijo %>-efectivo" value="efectivo" checked>
+    <label class="btn btn-outline-primary" for="<%= prefijo %>-efectivo"><i class="bi bi-cash"></i> Efectivo</label>
+    <input type="radio" class="btn-check" name="medio" id="<%= prefijo %>-tarjeta" value="tarjeta">
+    <label class="btn btn-outline-primary" for="<%= prefijo %>-tarjeta"><i class="bi bi-credit-card"></i> Tarjeta</label>
+    <input type="radio" class="btn-check" name="medio" id="<%= prefijo %>-transferencia" value="transferencia">
+    <label class="btn btn-outline-primary" for="<%= prefijo %>-transferencia"><i class="bi bi-bank"></i> Transf.</label>
+  </div>
+  <div class="campo-efectivo">
+    <label class="form-label small mb-1" for="<%= prefijo %>-recibido">Efectivo recibido</label>
+    <div class="input-group">
+      <span class="input-group-text">$</span>
+      <input id="<%= prefijo %>-recibido" name="recibido" type="number" min="0" step="0.5" class="form-control" inputmode="decimal">
+    </div>
+    <div class="small mt-1 texto-cambio text-body-secondary"></div>
+  </div>
+  <div class="campo-referencia d-none">
+    <label class="form-label small mb-1" for="<%= prefijo %>-referencia">Autorización o folio <span class="text-body-secondary">(opcional)</span></label>
+    <input id="<%= prefijo %>-referencia" name="referencia" maxlength="60" class="form-control">
+  </div>
+</div>

@@ -56,11 +56,11 @@ const vivos = c.articulos.filter(a => a.estado !== 'cancelada')
       </div>
     </div>
 
-    <!-- US-30: cancelación sin reembolso -->
+    <!-- US-30: cancelación (con reembolso si no se empezó a preparar) -->
     <div class="card border-0 shadow-sm mt-4">
       <div class="card-body p-4">
         <h2 class="h6 text-uppercase texto-seccion mb-1">Cancelar</h2>
-        <p class="small text-body-secondary">La comida ya pagada <strong>no se reembolsa</strong>. La cancelación la aprueba un administrador y queda registrada con su motivo.</p>
+        <p class="small text-body-secondary">Se <strong>reembolsa</strong> lo que cocina todavía no empezaba a preparar (estado <em>pendiente</em>), por el mismo medio con que pagó; lo que ya se preparaba o se entregó va <strong>sin reembolso</strong>. La aprueba un administrador y queda registrada con su motivo.</p>
         <% if (c.estado === 'cancelada' || !vivos.length) { %>
           <p class="mb-0 text-body-secondary">No hay nada por cancelar.</p>
         <% } else { %>
@@ -69,7 +69,7 @@ const vivos = c.articulos.filter(a => a.estado !== 'cancelada')
             <label class="form-label small mb-0" for="articulo_id">Qué se cancela</label>
             <select id="articulo_id" name="articulo_id" class="form-select">
               <option value="">Toda la comanda (<%= f.dinero(vivos.reduce((s, a) => s + a.precio_unitario, 0)) %>)</option>
-              <% vivos.forEach((a, i) => { %><option value="<%= a.id %>"><%= a.descripcion %><%= a.quitar.length || a.extras.length ? ' (con cambios)' : '' %> — <%= f.dinero(a.precio_unitario) %></option><% }) %>
+              <% vivos.forEach((a, i) => { %><option value="<%= a.id %>"><%= a.descripcion %><%= a.quitar.length || a.extras.length ? ' (con cambios)' : '' %> — <%= f.dinero(a.precio_unitario) %><%= a.va_a_cocina && a.estado === 'pendiente' ? ' · con reembolso' : ' · sin reembolso' %></option><% }) %>
             </select>
           </div>
           <div class="col-md-7">
@@ -78,7 +78,7 @@ const vivos = c.articulos.filter(a => a.estado !== 'cancelada')
             <div class="invalid-feedback">Escribe el motivo (mínimo 5 letras).</div>
           </div>
           <div class="col-12">
-            <button class="btn btn-outline-danger"><i class="bi bi-x-octagon"></i> <%= esAdmin ? 'Cancelar (sin reembolso)' : 'Solicitar cancelación' %></button>
+            <button class="btn btn-outline-danger"><i class="bi bi-x-octagon"></i> <%= esAdmin ? 'Cancelar' : 'Solicitar cancelación' %></button>
           </div>
         </form>
         <% } %>
@@ -87,7 +87,7 @@ const vivos = c.articulos.filter(a => a.estado !== 'cancelada')
           <% c.cancelaciones.forEach(k => { %>
           <li class="list-group-item bg-transparent px-0 small">
             <span class="badge <%= k.estado === 'aprobada' ? 'estado-cancelada' : k.estado === 'rechazada' ? 'text-bg-secondary' : 'estado-pendiente' %>"><%= k.estado %></span>
-            <%= k.articulo || 'Toda la comanda' %> · <%= f.dinero(k.monto) %> · “<%= k.motivo %>” · pidió <%= k.solicito %><%= k.autorizo ? ` · resolvió ${k.autorizo}` : '' %>
+            <%= k.articulo || 'Toda la comanda' %> · <%= f.dinero(k.monto) %> · <%= Number(k.monto_reembolso) > 0 ? `reembolso ${f.dinero(k.monto_reembolso)} (${k.medio_reembolso})` : 'sin reembolso' %> · “<%= k.motivo %>” · pidió <%= k.solicito %><%= k.autorizo ? ` · resolvió ${k.autorizo}` : '' %>
           </li>
           <% }) %>
         </ul>

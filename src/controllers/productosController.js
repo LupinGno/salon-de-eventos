@@ -1,3 +1,4 @@
+// control de productos y recetas
 const conexion = require('../database/db')
 const menu = require('./menuService')
 const { texto, lista, entero, decimal, fechaHora, aInputFechaHora } = require('./formatos')
@@ -14,11 +15,11 @@ async function ahoraBD() {
 async function catalogosFormulario() {
     const [categorias] = await conexion.query('SELECT * FROM categorias ORDER BY orden')
     const [temporadas] = await conexion.query('SELECT * FROM temporadas ORDER BY fecha_inicio')
-    const [ingredientes] = await conexion.query('SELECT id, nombre FROM ingredientes WHERE activo = 1 ORDER BY nombre')
+    const [ingredientes] = await conexion.query('SELECT id, nombre, unidad FROM ingredientes WHERE activo = 1 ORDER BY nombre')
     return { categorias, temporadas, ingredientes, imagenes: await galeria() }
 }
 
-// Si el formulario falla y ya se había subido una imagen, se borra
+// salvavidas para no perder los datos del formulario si hay errores gracias dios
 function descartarSubida(req) {
     if (req.file) borrarArchivo('/uploads/' + req.file.filename)
 }
@@ -35,6 +36,7 @@ exports.lista = async (req, res, next) => {
 }
 
 // Leer y validar el formulario de receta
+
 async function leerFormulario(req, idActual = null) {
     const b = req.body
     const errores = []
@@ -53,6 +55,7 @@ async function leerFormulario(req, idActual = null) {
 
     if (!datos.nombre) errores.push('El nombre es obligatorio.')
     else if (datos.nombre.length > 80) errores.push('El nombre no puede pasar de 80 caracteres.')
+    // no se permiten combos ni paquetes
     if (/\b(combo|paquete|promo(ci[oó]n)?|2x1|3x2)\b/i.test(datos.nombre + ' ' + (datos.descripcion || ''))) {
         errores.push('No se permiten combos, paquetes ni promociones: registra cada alimento por separado.')
     }
@@ -74,33 +77,37 @@ async function leerFormulario(req, idActual = null) {
     } else if (texto(b.temporada_id) !== '') errores.push('La temporada elegida no existe.')
 
     // Ingredientes de la receta
-    const ingIds = lista(b.ing_id), ingTipos = lista(b.ing_tipo)
+    const ingIds = lista(b.ing_id), ingTipos = lista(b.ing_tipo), ingCant = lista(b.ing_cant)
     const ingredientes = []
     ingIds.forEach((v, i) => {
         if (texto(v) === '') return
         const id = idValido(v), tipo = ingTipos[i]
+        const cantidad = ingCant[i] === undefined || texto(ingCant[i]) === '' ? 1 : decimal(ingCant[i], 0.01, 100000)
         if (!id || !['fijo', 'movil'].includes(tipo)) return errores.push('Hay un ingrediente de la receta con datos inválidos.')
+        if (cantidad === null) return errores.push('La cantidad de cada ingrediente debe ser mayor a 0 (máximo 2 decimales).')
         if (ingredientes.some(x => x.id === id)) return errores.push('Un ingrediente está repetido en la receta.')
-        ingredientes.push({ id, tipo })
+        ingredientes.push({ id, tipo, cantidad })
     })
-    // En pizza y alitas no se quitan ingredientes
+
     if (categoria && !categoria.permite_quitar && ingredientes.some(x => x.tipo === 'movil')) {
         errores.push(`En ${categoria.nombre} no se pueden quitar ingredientes: márcalos todos como fijos.`)
     }
 
     // Extras con costo
-    const extIds = lista(b.ext_id), extPrecios = lista(b.ext_precio)
+    const extIds = lista(b.ext_id), extPrecios = lista(b.ext_precio), extCant = lista(b.ext_cant)
     const extras = []
     extIds.forEach((v, i) => {
         if (texto(v) === '') return
         const id = idValido(v), precio = decimal(extPrecios[i], 0.5, 9999)
+        const cantidad = extCant[i] === undefined || texto(extCant[i]) === '' ? 1 : decimal(extCant[i], 0.01, 100000)
         if (!id) return errores.push('Hay un extra con datos inválidos.')
         if (precio === null) return errores.push('Cada extra debe tener un costo adicional mayor a $0.')
+        if (cantidad === null) return errores.push('La cantidad de cada extra debe ser mayor a 0.')
         if (extras.some(x => x.id === id)) return errores.push('Un extra está repetido.')
-        extras.push({ id, precio })
+        extras.push({ id, precio, cantidad })
     })
 
-    // Que los ingredientes existan
+    // Verificar que los ingredientes existan
     const todos = [...new Set([...ingredientes, ...extras].map(x => x.id))]
     if (todos.length) {
         const [existen] = await conexion.query('SELECT id FROM ingredientes WHERE id IN (?)', [todos])
@@ -120,12 +127,12 @@ async function guardarReceta(conn, productoId, ingredientes, extras) {
     await conn.query('DELETE FROM producto_ingredientes WHERE producto_id = ?', [productoId])
     await conn.query('DELETE FROM producto_extras WHERE producto_id = ?', [productoId])
     if (ingredientes.length) {
-        await conn.query('INSERT INTO producto_ingredientes (producto_id, ingrediente_id, tipo) VALUES ?',
-            [ingredientes.map(x => [productoId, x.id, x.tipo])])
+        await conn.query('INSERT INTO producto_ingredientes (producto_id, ingrediente_id, tipo, cantidad) VALUES ?',
+            [ingredientes.map(x => [productoId, x.id, x.tipo, x.cantidad])])
     }
     if (extras.length) {
-        await conn.query('INSERT INTO producto_extras (producto_id, ingrediente_id, precio) VALUES ?',
-            [extras.map(x => [productoId, x.id, x.precio])])
+        await conn.query('INSERT INTO producto_extras (producto_id, ingrediente_id, precio, cantidad) VALUES ?',
+            [extras.map(x => [productoId, x.id, x.precio, x.cantidad])])
     }
 }
 
@@ -170,9 +177,7 @@ exports.crear = async (req, res, next) => {
     } finally { conn.release() }
 }
 
-
-// Detalle (estilos y tamaños) y modificación
-
+// Detalle 
 exports.detalle = async (req, res, next) => {
     try {
         const id = idValido(req.params.id)
@@ -194,8 +199,8 @@ exports.formEditar = async (req, res, next) => {
         renderForm(res, 200, {
             titulo: 'Modificar receta', modo: 'editar', errores: [], ...(await catalogosFormulario()),
             datos: { ...producto, vigente_hasta: aInputFechaHora(producto.vigente_hasta) },
-            receta: [...producto.fijos, ...producto.moviles].map(x => ({ id: x.id, tipo: x.tipo })),
-            extrasForm: producto.extras.map(x => ({ id: x.id, precio: x.precio }))
+            receta: [...producto.fijos, ...producto.moviles].map(x => ({ id: x.id, tipo: x.tipo, cantidad: x.cantidad })),
+            extrasForm: producto.extras.map(x => ({ id: x.id, precio: x.precio, cantidad: x.cantidad }))
         })
     } catch (e) { next(e) }
 }
@@ -255,13 +260,12 @@ exports.eliminar = async (req, res, next) => {
         await conexion.query('DELETE FROM productos WHERE id = ?', [id])
         res.redirect('/catalogos/productos?ok=eliminado')
     } catch (e) {
+
         if (e.code === 'ER_ROW_IS_REFERENCED_2') return res.redirect('/catalogos/productos?ok=en-uso')
         next(e)
     }
 }
-
-// Estilos
-
+// Estilos 
 async function leerEstilo(req, productoId, idActual = 0) {
     const b = req.body
     const errores = []
@@ -294,7 +298,7 @@ exports.crearEstilo = async (req, res, next) => {
             descartarSubida(req)
             return res.redirect(`/catalogos/productos/${productoId}?error=` + encodeURIComponent(errores.join(' ')))
         }
-        //  si no se elige imagen, el estilo usa la misma imagen base del producto
+
         datos.imagen_id = (await imagenDelFormulario(req, datos.nombre)) || p.imagen_id
         await conexion.query('INSERT INTO estilos SET ?', [{ ...datos, producto_id: productoId }])
         res.redirect(`/catalogos/productos/${productoId}?ok=estilo#estilos`)
@@ -334,18 +338,20 @@ exports.guardarTamano = async (req, res, next) => {
         const nombre = texto(req.body.nombre)
         const precio = decimal(req.body.precio, 0.5, 99999)
         const orden = entero(req.body.orden, 0, 99) ?? 0
+        const factor = texto(req.body.factor_receta) === '' ? 1 : decimal(req.body.factor_receta, 0.1, 20)
         const volver = `/catalogos/productos/${productoId}`
         const [[p]] = productoId ? await conexion.query('SELECT id FROM productos WHERE id = ?', [productoId]) : [[null]]
         if (!p) return res.redirect('/catalogos/productos?ok=no-existe')
         if (!nombre || nombre.length > 40 || precio === null) {
             return res.redirect(volver + '?error=' + encodeURIComponent('El tamaño necesita nombre (máx. 40) y un precio mayor a $0.'))
         }
+        if (factor === null) return res.redirect(volver + '?error=' + encodeURIComponent('El factor de receta va de 0.1 a 20 (1 = receta normal).'))
         const [dup] = await conexion.query('SELECT id FROM tamanos WHERE producto_id = ? AND nombre = ? AND id <> ?', [productoId, nombre, tamanoId || 0])
         if (dup.length) return res.redirect(volver + '?error=' + encodeURIComponent('Ya existe un tamaño con ese nombre.'))
         if (tamanoId) {
-            await conexion.query('UPDATE tamanos SET nombre = ?, precio = ?, orden = ? WHERE id = ? AND producto_id = ?', [nombre, precio, orden, tamanoId, productoId])
+            await conexion.query('UPDATE tamanos SET nombre = ?, precio = ?, factor_receta = ?, orden = ? WHERE id = ? AND producto_id = ?', [nombre, precio, factor, orden, tamanoId, productoId])
         } else {
-            await conexion.query('INSERT INTO tamanos (producto_id, nombre, precio, orden) VALUES (?, ?, ?, ?)', [productoId, nombre, precio, orden])
+            await conexion.query('INSERT INTO tamanos (producto_id, nombre, precio, factor_receta, orden) VALUES (?, ?, ?, ?, ?)', [productoId, nombre, precio, factor, orden])
         }
         res.redirect(volver + '?ok=tamano#tamanos')
     } catch (e) { next(e) }

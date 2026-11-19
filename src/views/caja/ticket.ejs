@@ -51,9 +51,10 @@ const estados = { entregada: 'Entregado', pendiente: 'Pendiente (cocina)', en_pr
     <hr>
     <div class="fila"><strong>Cuenta de la mesa (<%= c.cuenta.length %> comandas)</strong><strong><%= f.dinero(c.cuenta_total) %></strong></div>
   <% } %>
-  <% if (c.estado === 'cancelada') { %><div class="centro"><strong>COMANDA CANCELADA — sin reembolso</strong></div><% } %>
+  <% if (c.estado === 'cancelada') { %><div class="centro"><strong>COMANDA CANCELADA</strong></div><% } %>
+  <% if (c.reembolsado > 0) { %><div class="fila"><strong>Reembolso (<%= medios[c.medio_pago] %>)</strong><strong>-<%= f.dinero(c.reembolsado) %></strong></div><% } %>
   <hr>
-  <div class="centro small">Pagado al ordenar. Los alimentos no tienen reembolso.</div>
+  <div class="centro small">Pagado al ordenar. Solo se reembolsa lo que no se empezó a preparar.</div>
   <div class="centro">¡Gracias por tu visita!</div>
 </article>
 

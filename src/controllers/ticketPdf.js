@@ -1,10 +1,7 @@
-// Puente entre Node.js y Python para el ticket PDF (US-28).
-// Ejecuta ticket_pdf.py, le manda los datos como JSON y recibe el PDF.
-// Busca Python en este orden: variable PYTHON del .env, "python", "py" (Windows) y "python3".
+// Puente entre Node.js y Python
 const { spawn } = require('child_process')
 const path = require('path')
 
-const SCRIPT = path.join(__dirname, 'ticket_pdf.py')
 const TIEMPO_MAXIMO_MS = 15000
 
 function candidatos() {
@@ -12,12 +9,12 @@ function candidatos() {
     return [...new Set(lista)]
 }
 
-// Intenta con un ejecutable; resuelve con el PDF o rechaza con un error que dice qué hacer
-function ejecutar(comando, datos) {
+// Intenta con un ejecutable o rechaza con un error que dice qué hacer
+function ejecutar(comando, datos, script) {
     return new Promise((resolve, reject) => {
         let hijo
         try {
-            hijo = spawn(comando, [SCRIPT], { windowsHide: true })
+            hijo = spawn(comando, [path.join(__dirname, script)], { windowsHide: true })
         } catch (e) {
             return reject(Object.assign(new Error('no encontrado'), { siguiente: true }))
         }
@@ -29,7 +26,7 @@ function ejecutar(comando, datos) {
         hijo.stderr.on('data', d => { errores += d.toString() })
         hijo.on('error', e => {
             clearTimeout(reloj)
-            // ENOENT = ese comando no existe en esta computadora: probar el siguiente
+            // el comando no existe en esta computadora
             reject(Object.assign(new Error(e.message), { siguiente: e.code === 'ENOENT' }))
         })
         hijo.on('close', codigo => {
@@ -39,7 +36,6 @@ function ejecutar(comando, datos) {
             if (/No module named ['"]?reportlab/.test(errores)) {
                 return reject(new Error('Falta la librería de Python reportlab. Instálala con: pip install reportlab'))
             }
-            // En Windows, "python" puede ser el acceso directo de la Microsoft Store (código 9009)
             if (codigo === 9009 || /was not found|no se encontr/i.test(errores)) {
                 return reject(Object.assign(new Error('no encontrado'), { siguiente: true }))
             }
@@ -50,10 +46,10 @@ function ejecutar(comando, datos) {
     })
 }
 
-async function generar(datos) {
+async function generar(datos, script = 'ticket_pdf.py') {
     for (const comando of candidatos()) {
         try {
-            return await ejecutar(comando, datos)
+            return await ejecutar(comando, datos, script)
         } catch (e) {
             if (!e.siguiente) throw e
         }

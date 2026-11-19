@@ -1,23 +1,14 @@
-// Módulo 3 — Cocina y recepción (US-32 a US-37). Sprint 5 (estados) y Sprint 6 (entrega).
-// La cola se arma con los artículos que la caja mandó a cocina (comanda_articulos.va_a_cocina = 1).
-//
-// Ciclo de vida de cada artículo (una fila = una unidad, US-23):
-//
-//   pendiente ──► en_preparacion ──► lista ──► entregada
-//       └──────────────────────────────┘
-//   (cocina puede marcar "lista" sin pasar por "preparando")
-//   Bebidas y lo que no se prepara nacen "entregada" en la caja (US-29).
-//   Cualquier estado puede terminar en "cancelada" si el administrador lo aprueba (US-30).
+// cocina y receepcion
 const conexion = require('../database/db')
 const { ErrorNegocio } = require('./menuService')
 
-// A qué estado se puede llegar y desde cuáles (máquina de estados del Sprint 5)
+// A qué estado se puede llegar 
 const DESDE = {
     en_preparacion: ['pendiente'],
     lista: ['pendiente', 'en_preparacion'],
     entregada: ['lista'],
 }
-// Hora y responsable que se guardan en cada paso
+// Hora y responsable 
 const SELLO = {
     en_preparacion: 'preparacion_en = NOW()',
     lista: 'lista_en = NOW(), lista_por = ?',
@@ -25,7 +16,14 @@ const SELLO = {
 }
 const usaUsuario = nuevo => nuevo !== 'en_preparacion'
 
-// Junta artículos con sus cambios dentro de su comanda
+const SIN_CANCELACION = `NOT EXISTS (SELECT 1 FROM cancelaciones k
+                                      WHERE k.estado = 'solicitada' AND k.comanda_id = a.comanda_id
+                                        AND (k.articulo_id IS NULL OR k.articulo_id = a.id))`
+const CANCELACION_PENDIENTE = `EXISTS (SELECT 1 FROM cancelaciones k
+                                       WHERE k.estado = 'solicitada' AND k.comanda_id = a.comanda_id
+                                         AND (k.articulo_id IS NULL OR k.articulo_id = a.id)) AS cancelacion_pendiente`
+
+// Junta artículos con sus cambios 
 async function conCambios(articulos) {
     if (!articulos.length) return []
     const [mods] = await conexion.query(
@@ -35,8 +33,9 @@ async function conCambios(articulos) {
         a.quitar = mods.filter(m => m.articulo_id === a.id && m.tipo === 'quitar').map(m => m.nombre)
         a.extras = mods.filter(m => m.articulo_id === a.id && m.tipo === 'extra').map(m => m.nombre)
     })
-    // Agrupar por comanda conservando el orden de llegada
+
     const comandas = []
+
     for (const a of articulos) {
         let c = comandas.find(x => x.id === a.comanda_id)
         if (!c) {
@@ -49,10 +48,10 @@ async function conCambios(articulos) {
     return comandas
 }
 
-// US-32, US-33: cola FIFO — primero en llegar, primero en atenderse. Las nuevas se forman atrás.
+// creacion cola
 async function colaCocina() {
     const [articulos] = await conexion.query(`
-        SELECT a.id, a.comanda_id, a.descripcion, a.piezas, a.estado,
+        SELECT a.id, a.comanda_id, a.descripcion, a.piezas, a.estado, ${CANCELACION_PENDIENTE},
                c.folio, c.para_llevar, c.cliente_nombre, c.creada_en, m.numero AS mesa,
                TIMESTAMPDIFF(MINUTE, c.creada_en, NOW()) AS minutos
           FROM comanda_articulos a
@@ -63,10 +62,9 @@ async function colaCocina() {
     return conCambios(articulos)
 }
 
-// US-35 / US-37: lo que cocina ya liberó y recepción debe llevar a la mesa (o empacar)
 async function paraEntregar() {
     const [articulos] = await conexion.query(`
-        SELECT a.id, a.comanda_id, a.descripcion, a.piezas, a.estado, a.lista_en,
+        SELECT a.id, a.comanda_id, a.descripcion, a.piezas, a.estado, a.lista_en, ${CANCELACION_PENDIENTE},
                c.folio, c.para_llevar, c.cliente_nombre, c.creada_en, m.numero AS mesa,
                TIMESTAMPDIFF(MINUTE, a.lista_en, NOW()) AS minutos
           FROM comanda_articulos a
@@ -75,7 +73,7 @@ async function paraEntregar() {
          WHERE a.estado = 'lista' AND c.estado = 'pagada'
          ORDER BY a.lista_en, c.id, a.id`)
     const comandas = await conCambios(articulos)
-    // Cuántos artículos de cada comanda siguen en cocina (entrega parcial, US-37)
+    // Cuántos artículos de cada comanda siguen en cocina 
     if (comandas.length) {
         const [faltan] = await conexion.query(`
             SELECT comanda_id, COUNT(*) AS n FROM comanda_articulos
@@ -86,7 +84,7 @@ async function paraEntregar() {
     return comandas
 }
 
-// Explica por qué no se pudo mover un artículo (solo se llama cuando el UPDATE no cambió nada)
+// Explica por qué no se pudo mover un artículo 
 async function motivoRechazo(articuloId, nuevo) {
     const [[a]] = await conexion.query(
         `SELECT a.estado, a.va_a_cocina, c.estado AS comanda_estado
@@ -94,17 +92,21 @@ async function motivoRechazo(articuloId, nuevo) {
     if (!a) return new ErrorNegocio('Ese artículo no existe.', 404)
     if (a.comanda_estado === 'cancelada' || a.estado === 'cancelada') return new ErrorNegocio('Ese artículo está cancelado.', 409)
     if (!a.va_a_cocina && nuevo !== 'entregada') return new ErrorNegocio('Ese artículo no se prepara en cocina.', 409)
+    const [[pendiente]] = await conexion.query(
+        `SELECT k.id FROM cancelaciones k JOIN comanda_articulos a ON a.comanda_id = k.comanda_id
+          WHERE a.id = ? AND k.estado = 'solicitada' AND (k.articulo_id IS NULL OR k.articulo_id = a.id) LIMIT 1`, [articuloId])
+    if (pendiente) return new ErrorNegocio('Tiene una cancelación pendiente: espera a que el administrador la resuelva.', 409)
     return new ErrorNegocio(`No se puede pasar de "${a.estado}" a "${nuevo}".`, 409)
 }
 
-// Arma el texto del aviso: "2 x Hamburguesa, 1 x Pizza Familiar · Hawaiana"
+// creacion del texto del aviso
 function resumen(descripciones) {
     const cuenta = new Map()
     descripciones.forEach(d => cuenta.set(d, (cuenta.get(d) || 0) + 1))
     return [...cuenta].map(([d, n]) => `${n} x ${d}`).join(', ').slice(0, 500)
 }
 
-// US-35: guarda el aviso a recepción con número de comanda y contenido
+// guarda el aviso a recepción con número de comanda y contenido
 async function crearAviso(db, comandaId, articuloIds, usuarioId) {
     const [[c]] = await db.query(
         `SELECT c.id, c.folio, c.para_llevar, m.numero AS mesa
@@ -125,8 +127,7 @@ async function crearAviso(db, comandaId, articuloIds, usuarioId) {
     return fila
 }
 
-// Cuando ya no queda nada "lista" de esa comanda, sus avisos se dan por atendidos.
-// Devuelve los ids cerrados para quitarlos también de las pantallas abiertas.
+//manda lista de avisos a recepcion
 async function cerrarAvisosAtendidos(db, comandaId, usuarioId) {
     const [[{ quedan }]] = await db.query(
         "SELECT COUNT(*) AS quedan FROM comanda_articulos WHERE comanda_id = ? AND estado = 'lista'", [comandaId])
@@ -139,18 +140,18 @@ async function cerrarAvisosAtendidos(db, comandaId, usuarioId) {
     return ids
 }
 
-// Mueve UN artículo respetando el orden de estados. Devuelve { comanda_id, aviso? }
+// Mueve un artículo respetando el orden de estados
 async function cambiarEstado(articuloId, nuevo, usuarioId) {
     if (!DESDE[nuevo]) throw new ErrorNegocio('Estado no válido.', 422)
     const db = await conexion.getConnection()
     try {
         await db.beginTransaction()
-        // UPDATE con condición: si dos pantallas lo intentan a la vez, solo una gana
+        // update
         const params = usaUsuario(nuevo) ? [nuevo, usuarioId || null, articuloId, DESDE[nuevo]] : [nuevo, articuloId, DESDE[nuevo]]
         const [r] = await db.query(
             `UPDATE comanda_articulos a JOIN comandas c ON c.id = a.comanda_id
                 SET a.estado = ?, ${SELLO[nuevo].replace(/(\w+) =/g, 'a.$1 =')}
-              WHERE a.id = ? AND a.estado IN (?) AND c.estado = 'pagada'
+              WHERE a.id = ? AND a.estado IN (?) AND c.estado = 'pagada' AND ${SIN_CANCELACION}
                 ${nuevo === 'entregada' ? '' : 'AND a.va_a_cocina = 1'}`, params)
         if (!r.affectedRows) throw await motivoRechazo(articuloId, nuevo)
 
@@ -168,7 +169,7 @@ async function cambiarEstado(articuloId, nuevo, usuarioId) {
     }
 }
 
-// Toda la comanda de un jalón: cocina la marca lista, o recepción la entrega
+// comandas de jalon
 async function cambiarEstadoComanda(comandaId, nuevo, usuarioId) {
     if (nuevo !== 'lista' && nuevo !== 'entregada') throw new ErrorNegocio('Estado no válido.', 422)
     const db = await conexion.getConnection()
@@ -176,7 +177,7 @@ async function cambiarEstadoComanda(comandaId, nuevo, usuarioId) {
         await db.beginTransaction()
         const [filas] = await db.query(
             `SELECT a.id FROM comanda_articulos a JOIN comandas c ON c.id = a.comanda_id
-              WHERE a.comanda_id = ? AND a.estado IN (?) AND c.estado = 'pagada'
+              WHERE a.comanda_id = ? AND a.estado IN (?) AND c.estado = 'pagada' AND ${SIN_CANCELACION}
                 ${nuevo === 'lista' ? 'AND a.va_a_cocina = 1' : ''}
               FOR UPDATE`, [comandaId, DESDE[nuevo]])
         if (!filas.length) throw new ErrorNegocio('No hay artículos de esa comanda para cambiar.', 409)
@@ -197,7 +198,7 @@ async function cambiarEstadoComanda(comandaId, nuevo, usuarioId) {
     }
 }
 
-// US-35: avisos que recepción todavía no atiende (por si la pantalla estaba cerrada)
+// avisos que recepción todavía no atiende
 async function avisosPendientes() {
     const [filas] = await conexion.query(
         `SELECT * FROM avisos_recepcion
@@ -212,7 +213,7 @@ async function marcarAvisoVisto(id, usuarioId) {
     if (!r.affectedRows) throw new ErrorNegocio('Ese aviso no existe o ya se atendió.', 404)
 }
 
-// US-37: control de pendientes del día — cada comanda con cuánto lleva entregado y qué falta
+// control de pendientes del día 
 async function controlPendientes() {
     const [filas] = await conexion.query(`
         SELECT c.id, c.folio, c.para_llevar, c.cliente_nombre, c.creada_en, m.numero AS mesa,
@@ -229,7 +230,7 @@ async function controlPendientes() {
         HAVING entregados < total
          ORDER BY c.creada_en, c.id`)
     if (!filas.length) return []
-    // Qué artículos faltan, para mostrarlos con su estado
+    // Qué artículos faltan
     const [faltan] = await conexion.query(`
         SELECT comanda_id, descripcion, estado FROM comanda_articulos
          WHERE comanda_id IN (?) AND estado IN ('pendiente','en_preparacion','lista')
@@ -244,7 +245,7 @@ async function controlPendientes() {
     return filas
 }
 
-// US-36: entregas del día con hora, quién entregó y cuánto esperó el cliente
+//entregas del día con hora
 async function entregadasHoy() {
     const [filas] = await conexion.query(`
         SELECT a.id, a.descripcion, a.va_a_cocina, a.lista_en, a.entregado_en,

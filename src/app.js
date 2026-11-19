@@ -1,7 +1,6 @@
 const path = require('path')
 
-// 1) Variables de entorno: se cargan ANTES que todo lo demás,
-//    porque db.js y los controladores las leen al importarse.
+//Variables de entorno
 require('dotenv').config({ path: path.join(__dirname, 'env', '.env'), quiet: true })
 
 const requeridas = ['DB_HOST', 'DB_USER', 'DB_DATABASE', 'JWT_SECRETO', 'TOKEN_CLAVE_CIFRADO']
@@ -21,14 +20,12 @@ const app = express()
 app.set('view engine', 'ejs')
 app.set('views', path.join(__dirname, 'views'))
 
-// No revelar que el servidor es Express
 app.disable('x-powered-by')
 
-// Archivos estáticos (css, js, imágenes)
+// Archivos estáticos 
 app.use(express.static(path.join(__dirname, 'public')))
 
-// Bootstrap, iconos y SweetAlert se sirven desde node_modules (npm install),
-// así la página se ve bien aunque no haya internet el día de la demo.
+// Bootstrap, iconos y SweetAlert 
 const modulos = path.join(__dirname, '..', 'node_modules')
 app.use('/vendor/bootstrap', express.static(path.join(modulos, 'bootstrap', 'dist')))
 app.use('/vendor/bootstrap-icons', express.static(path.join(modulos, 'bootstrap-icons', 'font')))
@@ -36,9 +33,9 @@ app.use('/vendor/sweetalert2', express.static(path.join(modulos, 'sweetalert2', 
 
 // Recibir datos de formularios
 app.use(express.urlencoded({ extended: false }))
-app.use(express.json())
+app.use(express.json({ limit: '1mb' }))  
 
-// Cookies (ahí viaja el token encriptado)
+// Cookies
 app.use(cookieParser())
 
 // Encabezados básicos de seguridad
@@ -50,25 +47,33 @@ app.use((req, res, next) => {
 })
 
 // Evitar que el botón "atrás" muestre páginas privadas después de salir.
-// (En la base original este middleware estaba DESPUÉS de las rutas y nunca se ejecutaba.)
 app.use(noCache)
 app.use(valoresPorDefecto)
 
 // Rutas
 app.use('/', require('./routes/router'))
 
+const pideJson = req => req.originalUrl.startsWith('/api/') || req.accepts(['html', 'json']) === 'json'
+
 // 404
 app.use((req, res) => {
+    if (pideJson(req)) return res.status(404).json({ error: 'La dirección que buscas no existe.' })
     res.status(404).render('error', { codigo: 404, titulo: 'Página no encontrada', mensaje: 'La dirección que buscas no existe.' })
 })
 
 // Errores inesperados
 app.use((err, req, res, next) => {
     console.error(err)
-    res.status(500).render('error', { codigo: 500, titulo: 'Error del servidor', mensaje: 'Ocurrió un error inesperado. Intenta de nuevo.' })
+    // Mensajes claros para los dos errores más comunes 
+    let mensaje = 'Ocurrió un error inesperado. Intenta de nuevo.'
+    if (['ER_BAD_FIELD_ERROR', 'ER_NO_SUCH_TABLE'].includes(err.code)) {
+        mensaje = 'A la base de datos le falta una migración. Revisa la terminal del servidor.'
+    } else if (['ECONNREFUSED', 'PROTOCOL_CONNECTION_LOST', 'ETIMEDOUT'].includes(err.code)) {
+        mensaje = 'No hay conexión con la base de datos. Revisa que Docker y MySQL estén encendidos.'
+    }
+    if (pideJson(req)) return res.status(500).json({ error: mensaje })
+    res.status(500).render('error', { codigo: 500, titulo: 'Error del servidor', mensaje })
 })
-
-// Sprint 5: el mismo servidor atiende las páginas (Express) y el tiempo real (Socket.IO)
 const http = require('http')
 const servidor = http.createServer(app)
 require('./controllers/tiempoReal').iniciar(servidor)
@@ -76,6 +81,8 @@ require('./controllers/tiempoReal').iniciar(servidor)
 const PORT = process.env.PORT || 3000
 servidor.listen(PORT, () => {
     console.log(`Servidor activo en http://localhost:${PORT}`)
-    // US-13: revisa cada 30 s los productos cuya vigencia ya pasó
+    // Avisa en la terminal 
+    require('./database/revisarBase').revisar().catch(() => {})
+    // revisa cada 30 s los productos cuya vigencia ya pasó
     require('./database/vigencias').iniciar()
 })

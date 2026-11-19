@@ -1,4 +1,4 @@
-// Módulo 2 — Punto de venta y comandas (Sprint 4): US-21 a US-31
+// Punto de venta y comandas
 const conexion = require('../database/db')
 const menu = require('./menuService')
 const caja = require('./cajaService')
@@ -9,22 +9,24 @@ const { ROLES } = require('../routes/modulos')
 
 const esAdmin = req => req.usuario.rol === ROLES.ADMIN
 
-// Lo cancelado sale de la cola de cocina y de "Para entregar" sin recargar la página
+// Lo cancelado
 function avisarCancelacion() {
     tiempoReal.emitir('cocina', 'cocina:cambio', { motivo: 'cancelacion' })
     tiempoReal.emitir('recepcion', 'recepcion:cambio', { motivo: 'cancelacion' })
 }
 
-// Pantalla de la caja: menú vendible hoy, mesas activas y cuentas abiertas
+// Pantalla de la caja
 exports.puntoDeVenta = async (req, res, next) => {
     try {
-        const productos = (await menu.menuCompleto()).filter(p => p.vendible).map(p => ({
+        // los agotados también se muestran, marcados y sin poder elegirse
+        const productos = (await menu.menuCompleto()).filter(p => p.vendible || p.agotado).map(p => ({
+            agotado: p.agotado ? p.motivo : null,
             id: p.id, nombre: p.nombre, categoria: p.categoria, imagen: p.imagen, descripcion: p.descripcion,
             precio_base: p.precio_base, precio_desde: p.precio_desde, piezas: p.piezas_por_orden,
             va_a_cocina: Boolean(p.requiere_preparacion), permite_quitar: Boolean(p.permite_quitar),
             fijos: p.fijos.map(i => ({ id: i.id, nombre: i.nombre })),
-            moviles: p.moviles.map(i => ({ id: i.id, nombre: i.nombre })),
-            extras: p.extras.map(i => ({ id: i.id, nombre: i.nombre, precio: i.precio })),
+            moviles: p.moviles.map(i => ({ id: i.id, nombre: i.nombre, agotado: i.agotado })),
+            extras: p.extras.map(i => ({ id: i.id, nombre: i.nombre, precio: i.precio, agotado: i.agotado })),
             tamanos: p.tamanos.map(t => ({ id: t.id, nombre: t.nombre, precio: t.precio })),
             estilos: p.estilos.filter(e => e.disponible).map(e => ({ id: e.id, nombre: e.nombre, precio_extra: e.precio_extra, imagen: e.imagen }))
         }))
@@ -35,11 +37,11 @@ exports.puntoDeVenta = async (req, res, next) => {
     } catch (e) { next(e) }
 }
 
-// Registra la comanda (JSON). El servidor vuelve a validar y a calcular TODO.
+// Registra la comanda
 exports.registrar = async (req, res, next) => {
     try {
         const resultado = await caja.registrarComanda(req.body || {}, req.usuario.id)
-        // Sprint 5: la cocina se entera al instante (US-32); las nuevas se forman al final
+        // la cocina se entera al instante
         if (resultado.a_cocina) tiempoReal.emitir('cocina', 'cocina:nueva', { folio: resultado.folio, articulos: resultado.a_cocina })
         res.status(201).json(resultado)
     } catch (e) {
@@ -74,7 +76,7 @@ exports.detalle = async (req, res, next) => {
     } catch (e) { next(e) }
 }
 
-// US-30: solicitar cancelación (sin reembolso)
+//solicitar cancelación 
 exports.cancelar = async (req, res, next) => {
     const id = entero(req.params.id, 1)
     try {
@@ -82,8 +84,8 @@ exports.cancelar = async (req, res, next) => {
         const r = await caja.solicitarCancelacion(
             { comandaId: id, articuloId, motivo: req.body.motivo },
             { id: req.usuario.id, esAdmin: esAdmin(req) })
-        if (r.aprobada) avisarCancelacion()
-        res.redirect(`/caja/comandas/${id}?ok=${r.aprobada ? 'cancelada' : 'cancelacion-solicitada'}`)
+        avisarCancelacion()   // aprobada
+        res.redirect(`/caja/comandas/${id}?ok=${!r.aprobada ? 'cancelacion-solicitada' : r.con_reembolso ? 'cancelada-reembolso' : 'cancelada'}`)
     } catch (e) {
         if (e instanceof caja.ErrorNegocio) return res.redirect(`/caja/comandas/${id}?error=${encodeURIComponent(e.message)}`)
         next(e)
@@ -97,19 +99,19 @@ exports.cancelaciones = async (req, res, next) => {
     } catch (e) { next(e) }
 }
 
-// Solo administrador (la ruta lo exige)
+// Solo administrador 
 exports.resolver = aprobar => async (req, res, next) => {
     try {
-        await caja.resolverCancelacion(entero(req.params.id, 1), aprobar, req.usuario.id)
-        if (aprobar) avisarCancelacion()
-        res.redirect(`/caja/cancelaciones?ok=${aprobar ? 'cancelada' : 'cancelacion-rechazada'}`)
+        const r = await caja.resolverCancelacion(entero(req.params.id, 1), aprobar, req.usuario.id)
+        avisarCancelacion()
+        res.redirect(`/caja/cancelaciones?ok=${!aprobar ? 'cancelacion-rechazada' : r.con_reembolso ? 'cancelada-reembolso' : 'cancelada'}`)
     } catch (e) {
         if (e instanceof caja.ErrorNegocio) return res.redirect('/caja/cancelaciones?ok=no-existe')
         next(e)
     }
 }
 
-// Liberar la mesa: cierra su cuenta (la siguiente comanda abre una nueva)
+// Liberar la mesa
 exports.cerrarCuenta = async (req, res, next) => {
     try {
         await caja.cerrarCuenta(entero(req.params.id, 1))
@@ -120,7 +122,7 @@ exports.cerrarCuenta = async (req, res, next) => {
     }
 }
 
-// US-28: ticket en pantalla (imprimible)
+// ticket en pantalla 
 exports.ticket = async (req, res, next) => {
     try {
         const c = await comandaDeTicket(req.params.id)
@@ -129,7 +131,7 @@ exports.ticket = async (req, res, next) => {
     } catch (e) { next(e) }
 }
 
-// US-28: ticket en PDF, generado con Python (ticket_pdf.py)
+// ticket en PDF
 exports.ticketPdf = async (req, res, next) => {
     try {
         const c = await comandaDeTicket(req.params.id)
@@ -156,7 +158,6 @@ async function comandaDeTicket(ticketId) {
     return t ? caja.detalleComanda(t.comanda_id) : null
 }
 
-// Lo que necesita el script de Python: solo texto y números
 function datosTicket(c) {
     return {
         negocio: 'Salón de Eventos y Snacks',
@@ -171,6 +172,7 @@ function datosTicket(c) {
         })),
         total: c.total, medio: c.medio_pago, recibido: c.recibido, cambio: c.cambio, referencia: c.referencia,
         estado: c.estado,
+        reembolsado: c.reembolsado,
         cuenta: c.cuenta.length > 1 ? { comandas: c.cuenta.length, total: c.cuenta_total } : null
     }
 }

@@ -1,0 +1,49 @@
+<%- include('../partials/encabezado') %>
+<%
+const colorEstado = { apartada: 'text-bg-warning', liquidada: 'text-bg-primary', en_curso: 'text-bg-info', realizada: 'text-bg-success', cancelada: 'text-bg-secondary' }
+const cuotaTexto = { retenida: 'En garantía', devuelta: 'Devuelta', cobrada: 'No se devolvió' }
+%>
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1 class="h3 mb-0">Reservas de salones</h1>
+    <p class="text-body-secondary mb-0">Quién rentó, quién responde, lo que falta por pagar y cómo quedó la cuota.</p>
+  </div>
+  <a href="/salones" class="btn btn-marca"><i class="bi bi-plus-lg"></i> Nueva reserva</a>
+</div>
+
+<%- include('_nav') %>
+
+<div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Filtrar reservas">
+  <% Object.entries(FILTROS).forEach(([k, v]) => { %>
+  <a href="/salones/reservas?filtro=<%= k %>" class="btn btn-sm <%= filtro === k ? 'btn-primary' : 'btn-outline-primary' %>"><%= v %></a>
+  <% }) %>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <% if (!filas.length) { %><p class="text-body-secondary p-4 mb-0">No hay reservas en esta lista.</p><% } else { %>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Folio</th><th>Fecha</th><th>Salón</th><th>Paga / responsable</th><th>Estado</th><th class="text-end">Saldo</th><th>Cuota</th></tr></thead>
+        <tbody>
+          <% filas.forEach(r => { %>
+          <tr>
+            <td class="text-nowrap"><a href="/salones/reservas/<%= r.id %>" class="fw-semibold"><%= r.folio %></a></td>
+            <td class="text-nowrap"><%= f.fechaCorta(r.fecha) %></td>
+            <td><%= r.salon %><div class="small text-body-secondary"><%= r.personas %> pers. · <%= r.con_alimentos ? 'con alimentos' : 'sin alimentos' %><%= r.fiesta_menores ? ' · menores' : '' %></div></td>
+            <td><%= r.cliente %><% if (r.responsable !== r.cliente) { %><div class="small text-body-secondary">Responde: <%= r.responsable %></div><% } %></td>
+            <td><span class="badge <%= colorEstado[r.estado] %>"><%= r.estado_texto %></span>
+              <% if (r.vencida) { %><span class="badge text-bg-danger">pago vencido</span><% } %></td>
+            <td class="text-end <%= r.saldo > 0 ? 'text-danger fw-semibold' : '' %>"><%= f.dinero(r.saldo) %>
+              <% if (r.saldo > 0) { %><div class="small text-body-secondary">antes del <%= r.fecha_limite.split('-').reverse().join('/') %></div><% } %></td>
+            <td class="small"><%= cuotaTexto[r.estado_cuota] %><%= Number(r.cargo_danos) > 0 ? ` + cargo ${f.dinero(r.cargo_danos)}` : '' %></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/pie') %>

@@ -174,7 +174,7 @@ exports.eliminarMobiliario = async (req, res, next) => {
     }
 }
 
-// BRINCOLINES 
+// brincolines
 exports.brincolines = async (req, res, next) => {
     try {
         const [brincolines] = await conexion.query(`
@@ -271,7 +271,7 @@ exports.eliminarBrincolin = async (req, res, next) => {
 }
 
 
-// CONSULTAS 
+// consultas
 
 exports.consultas = async (req, res, next) => {
     try {
