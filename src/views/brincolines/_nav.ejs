@@ -1,0 +1,12 @@
+<%
+const seccionesBrincolines = [
+  ['/brincolines', 'Catálogo por fecha', 'calendar2-week', r => r === '/brincolines' || r === '/brincolines/rentar'],
+  ['/brincolines/rentas', 'Rentas', 'journal-bookmark', r => r.startsWith('/brincolines/rentas')],
+  ['/brincolines/equipo', 'Equipo', 'tools', r => r.startsWith('/brincolines/equipo')]
+]
+%>
+<nav class="nav nav-pills nav-catalogo gap-1 mb-4 flex-nowrap overflow-auto pb-1" aria-label="Secciones de renta de brincolines">
+  <% seccionesBrincolines.forEach(([ruta, nombre, icono, activa]) => { %>
+    <a class="nav-link text-nowrap <%= activa(rutaActual) ? 'active' : '' %>" href="<%= ruta %>"><i class="bi bi-<%= icono %>"></i> <%= nombre %></a>
+  <% }) %>
+</nav>

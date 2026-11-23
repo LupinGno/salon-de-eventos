@@ -37,13 +37,13 @@ const MODULOS = [
         descripcion: 'Disponibilidad, aforo y mobiliario; reserva con responsable, firma y contrato PDF; apartado, liquidación, entrega del salón y cuota de garantía.'
     },
     {
-        clave: 'brincolines', titulo: 'Renta de brincolines', icono: 'balloon-fill',
-        entrega: 'Sprint 10 — jueves 19 nov',
-        descripcion: 'Catálogo por fecha, instalación, garantías y recolección.'
+        clave: 'brincolines', titulo: 'Renta de brincolines', icono: 'balloon-fill', ruta: '/brincolines',
+        entrega: 'Sprint 10', listo: true,
+        descripcion: 'Catálogo por fecha, renta a domicilio con contrato firmado, instalación y recolección; garantía, daños, reembolsos, reagendas y cambios de modelo.'
     },
     {
-        clave: 'limpieza', titulo: 'Limpieza', icono: 'stars',
-        entrega: 'Sprint 10 — jueves 19 nov',
+        clave: 'limpieza', titulo: 'Limpieza', icono: 'stars', ruta: '/limpieza',
+        entrega: 'Sprint 10', listo: true,
         descripcion: 'Liberar salones y brincolines después de limpiarlos e inspeccionarlos.'
     },
     {

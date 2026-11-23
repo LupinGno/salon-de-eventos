@@ -1,0 +1,85 @@
+<%# Sprint 10: resolver una falla de la empresa (US-60, US-61), cambiar de modelo (US-61) y cancelar (US-62) %>
+<% if (extra && extra.puede) { const medios = { efectivo: 'efectivo', tarjeta: 'tarjeta', transferencia: 'transferencia' } %>
+
+<% if (extra.puede.resolver) { %>
+<section class="card border-0 shadow-sm border-start border-danger border-4">
+  <div class="card-body p-4">
+    <h2 class="h6 text-uppercase texto-seccion mb-2"><i class="bi bi-life-preserver"></i> Falla de la empresa</h2>
+    <p class="small text-body-secondary mb-3">El cliente elige. Todo se devuelve o se cobra por <%= medios[r.medio_pago] %>.</p>
+
+    <form method="post" action="/brincolines/rentas/<%= r.id %>/resolver" class="mb-3"
+          data-preguntar="Se cancela la renta y se devuelven <%= f.dinero(r.precio + r.garantia) %> (renta + garantía) a <%= r.cliente_nombre %> en <%= medios[r.medio_pago] %>.">
+      <input type="hidden" name="accion" value="reembolso">
+      <button class="btn btn-outline-danger w-100"><i class="bi bi-cash-coin"></i> Reembolso completo (<%= f.dinero(r.precio + r.garantia) %>)</button>
+    </form>
+
+    <% if (extra.estadoBrincolin !== 'baja') { %>
+    <form method="post" action="/brincolines/rentas/<%= r.id %>/resolver" class="mb-3" data-preguntar="Se cambia la renta de <%= r.brincolin %> a la fecha elegida.">
+      <input type="hidden" name="accion" value="reagenda">
+      <label class="form-label small mb-1" for="re-fecha">Otra fecha, mismo brincolín</label>
+      <div class="input-group">
+        <input id="re-fecha" name="fecha" type="date" class="form-control" required>
+        <button class="btn btn-outline-primary">Reagendar</button>
+      </div>
+    </form>
+    <% } %>
+
+    <% if (extra.sugerencias.some(s => s.cabe)) { %>
+    <form method="post" action="/brincolines/rentas/<%= r.id %>/resolver" class="mb-3" data-preguntar="Se cambia a otro modelo y se cuadra la diferencia por el mismo medio.">
+      <input type="hidden" name="accion" value="cambio">
+      <label class="form-label small mb-1" for="re-modelo">Otro modelo libre ese día (sugeridos)</label>
+      <select id="re-modelo" name="brincolin_id" class="form-select mb-1" data-diferencia="re-dif" data-actual="<%= r.precio + r.garantia %>">
+        <% extra.sugerencias.filter(s => s.cabe).forEach(s => { %>
+        <option value="<%= s.id %>" data-total="<%= s.total %>"><%= s.nombre %> · <%= s.medidas %> · <%= f.dinero(s.precio) %> + <%= f.dinero(s.garantia) %></option>
+        <% }) %>
+      </select>
+      <div class="small fw-semibold mb-2" id="re-dif"></div>
+      <input type="number" name="recibido" min="0" step="0.5" class="form-control form-control-sm mb-2" placeholder="Efectivo recibido (si se cobra)">
+      <button class="btn btn-outline-primary w-100">Cambiar de modelo</button>
+    </form>
+    <% } else { %>
+    <p class="small text-body-secondary mb-3">No hay otro modelo libre ese día que quepa en el espacio del cliente.</p>
+    <% } %>
+
+    <% if (!['baja', 'en_reparacion'].includes(extra.estadoBrincolin)) { %>
+    <form method="post" action="/brincolines/rentas/<%= r.id %>/resolver" data-preguntar="El brincolín ya está listo: la renta sigue igual.">
+      <input type="hidden" name="accion" value="sigue">
+      <button class="btn btn-outline-success w-100">Ya se reparó: sigue igual</button>
+    </form>
+    <% } %>
+  </div>
+</section>
+<% } %>
+
+<% if (extra.puede.cambiar) { %>
+<form method="post" action="/brincolines/rentas/<%= r.id %>/cambiar" class="card border-0 shadow-sm" data-preguntar="Se cambia el modelo; si es más barato se devuelve la diferencia y si es más caro se cobra.">
+  <div class="card-body p-4">
+    <h2 class="h6 text-uppercase texto-seccion mb-2"><i class="bi bi-arrow-left-right"></i> Cambiar de modelo</h2>
+    <% if (extra.sugerencias.some(s => s.cabe)) { %>
+    <select name="brincolin_id" class="form-select mb-1" aria-label="Modelo nuevo" data-diferencia="cm-dif" data-actual="<%= r.precio + r.garantia %>">
+      <% extra.sugerencias.filter(s => s.cabe).forEach(s => { %>
+      <option value="<%= s.id %>" data-total="<%= s.total %>"><%= s.nombre %> · <%= f.dinero(s.precio) %> + <%= f.dinero(s.garantia) %></option>
+      <% }) %>
+    </select>
+    <div class="small fw-semibold mb-2" id="cm-dif"></div>
+    <input type="number" name="recibido" min="0" step="0.5" class="form-control form-control-sm mb-2" placeholder="Efectivo recibido (si se cobra)">
+    <button class="btn btn-outline-primary w-100">Cambiar</button>
+    <% } else { %>
+    <p class="small text-body-secondary mb-0">No hay otro modelo libre ese día que quepa en el espacio del cliente.</p>
+    <% } %>
+  </div>
+</form>
+<% } %>
+
+<% if (extra.puede.cancelar) { %>
+<form method="post" action="/brincolines/rentas/<%= r.id %>/cancelar" class="card border-0 shadow-sm"
+      data-preguntar="El cliente cancela: la renta de <%= f.dinero(r.precio) %> NO se reembolsa; la garantía de <%= f.dinero(r.garantia) %> se devuelve en <%= medios[r.medio_pago] %>.">
+  <div class="card-body p-4">
+    <h2 class="h6 text-uppercase texto-seccion mb-2"><i class="bi bi-x-octagon"></i> Cancelar (cliente)</h2>
+    <p class="small text-body-secondary">Sin reembolso de la renta. La garantía se devuelve porque no se usó.</p>
+    <input name="motivo" maxlength="255" class="form-control mb-3" placeholder="Motivo" required>
+    <button class="btn btn-outline-danger w-100">Cancelar renta</button>
+  </div>
+</form>
+<% } %>
+<% } %>

@@ -1,0 +1,78 @@
+<%- include('../partials/encabezado') %>
+<%
+const fecha = iso => iso ? iso.split('-').reverse().join('/') : ''
+const resultados = { limpio: 'Limpio', sucio: 'Sucio', danos: 'Con daños' }
+%>
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1 class="h3 mb-0">Limpieza <span class="badge text-bg-primary align-middle fs-6"><%= tareas.length %> pendiente(s)</span></h1>
+    <p class="text-body-secondary mb-0">Limpia e inspecciona. Un brincolín vuelve a rentarse solo si queda limpio y sin daños; con tu revisión se decide la garantía o la cuota.</p>
+  </div>
+</div>
+
+<%- include('../partials/errores', { errores }) %>
+
+<% if (!tareas.length) { %>
+<div class="card border-0 shadow-sm"><div class="card-body p-5 text-center text-body-secondary"><i class="bi bi-stars fs-1 d-block mb-2"></i>No hay nada pendiente.</div></div>
+<% } %>
+
+<div class="row g-3">
+  <% tareas.forEach(t => { %>
+  <div class="col-md-6 col-xl-4">
+    <div class="card h-100 border-0 shadow-sm" id="tarea-<%= t.id %>">
+      <% if (t.imagen) { %><img src="<%= t.imagen %>" class="card-img-top img-salon" alt=""><% } %>
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <h2 class="h6 mb-1"><i class="bi bi-<%= t.tipo === 'salon' ? 'building' : 'balloon' %>"></i> <%= t.tipo === 'salon' ? t.salon : t.brincolin %></h2>
+          <% if (t.folio) { %><span class="badge text-bg-light"><%= t.folio %></span><% } %>
+        </div>
+        <div class="small text-body-secondary mb-3"><%= t.origen %> · desde <%= t.creada_texto %></div>
+
+        <% if (t.tipo === 'brincolin') { %>
+        <form method="post" action="/limpieza/tareas/<%= t.id %>/brincolin" class="mt-auto d-grid gap-2">
+          <div class="btn-group" role="group" aria-label="Resultado">
+            <input type="radio" class="btn-check" name="resultado" id="r<%= t.id %>-limpio" value="limpio" required>
+            <label class="btn btn-outline-success" for="r<%= t.id %>-limpio">Limpio y sin daños</label>
+            <input type="radio" class="btn-check" name="resultado" id="r<%= t.id %>-danos" value="danos">
+            <label class="btn btn-outline-danger" for="r<%= t.id %>-danos">Tiene daños</label>
+          </div>
+          <input name="observaciones" maxlength="255" class="form-control form-control-sm" placeholder="Si tiene daños, ¿cuáles?">
+          <div class="small text-body-secondary">
+            <% if (t.garantia_renta !== null) { %>Limpio: vuelve a estar disponible y se devuelve la garantía de <%= f.dinero(t.garantia_renta) %>. Con daños: va a reparación y la garantía no se devuelve.
+            <% } else { %>Limpio: vuelve a estar disponible. Con daños: regresa a reparación.<% } %>
+          </div>
+          <button class="btn btn-marca">Guardar revisión</button>
+        </form>
+        <% } else { %>
+        <div class="small mb-2">Evento del <%= fecha(t.fecha_evento) %> · <%= t.personas %> personas · cuota <%= f.dinero(t.cuota_garantia) %></div>
+        <form method="post" action="/limpieza/tareas/<%= t.id %>/salon" class="mt-auto d-grid gap-2">
+          <div class="btn-group" role="group" aria-label="Resultado">
+            <input type="radio" class="btn-check" name="resultado" id="s<%= t.id %>-limpio" value="limpio" required>
+            <label class="btn btn-outline-success" for="s<%= t.id %>-limpio">Limpio</label>
+            <input type="radio" class="btn-check" name="resultado" id="s<%= t.id %>-sucio" value="sucio">
+            <label class="btn btn-outline-warning" for="s<%= t.id %>-sucio">Sucio</label>
+            <input type="radio" class="btn-check" name="resultado" id="s<%= t.id %>-danos" value="danos">
+            <label class="btn btn-outline-danger" for="s<%= t.id %>-danos">Daños</label>
+          </div>
+          <input name="descripcion" maxlength="255" class="form-control form-control-sm" placeholder="Si está sucio o con daños, ¿qué pasó?">
+          <div class="input-group input-group-sm"><span class="input-group-text">$</span><input name="costo" type="number" min="1" step="0.5" class="form-control" placeholder="Costo de reparar (solo daños)"></div>
+          <div class="small text-body-secondary">Limpio: se devuelve la cuota. Sucio: la cuota se queda. Daños: la cuota se queda y el responsable paga el resto.</div>
+          <button class="btn btn-marca">Guardar revisión</button>
+        </form>
+        <% } %>
+      </div>
+    </div>
+  </div>
+  <% }) %>
+</div>
+
+<% if (hechas.length) { %>
+<h2 class="h6 text-uppercase texto-seccion mt-4 mb-2">Revisado hoy</h2>
+<ul class="list-group shadow-sm">
+  <% hechas.forEach(h => { %>
+  <li class="list-group-item small d-flex justify-content-between"><span><%= h.hora %> · <%= h.tipo === 'salon' ? h.salon : h.brincolin %></span><span class="badge text-bg-<%= h.estado === 'liberado' ? 'success' : 'danger' %>"><%= resultados[h.resultado] %></span></li>
+  <% }) %>
+</ul>
+<% } %>
+
+<%- include('../partials/pie') %>

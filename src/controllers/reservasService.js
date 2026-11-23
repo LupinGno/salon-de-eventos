@@ -92,10 +92,13 @@ async function brincolinesLibres(fecha, db = conexion, bloquear = false) {
     const [filas] = await db.query(
         `SELECT b.id, b.nombre, b.descripcion, b.largo_m, b.ancho_m, b.alto_m, b.estado, i.archivo AS imagen
            FROM brincolines b LEFT JOIN imagenes i ON i.id = b.imagen_id
-          WHERE b.estado ${fecha === hoy ? "= 'disponible'" : "IN ('disponible', 'en_limpieza')"}
+          WHERE b.estado ${fecha === hoy ? "= 'disponible'" : "IN ('disponible', 'rentado', 'en_limpieza')"}
             AND NOT EXISTS (SELECT 1 FROM reserva_brincolines rb JOIN reservas_salon r ON r.id = rb.reserva_id
                              WHERE rb.brincolin_id = b.id AND r.fecha_evento = ? AND r.estado <> 'cancelada')
-          ORDER BY b.nombre ${bloquear ? 'FOR UPDATE' : ''}`, [fecha])
+            -- Sprint 9: tampoco si está rentado a domicilio ese día o se recoge ese día
+            AND NOT EXISTS (SELECT 1 FROM rentas_brincolin rd
+                             WHERE rd.brincolin_id = b.id AND rd.activa = 1 AND rd.fecha IN (?, DATE_SUB(?, INTERVAL 1 DAY)))
+          ORDER BY b.nombre ${bloquear ? 'FOR UPDATE' : ''}`, [fecha, fecha, fecha])
     return filas
 }
 
@@ -280,7 +283,7 @@ const CONCEPTOS = {
     apartado: 'Apartado un 50%', pago_total: 'Pago total', liquidacion: 'Liquidación', cuota: 'Cuota de garantía',
     devolucion_cuota: 'Devolución de la cuota', cargo_danos: 'Cargo por daños', reembolso_alimentos: 'Reembolso de alimentos'
 }
-const ESTADOS = { apartada: 'Apartada', liquidada: 'Liquidada', en_curso: 'Salón entregado', realizada: 'Terminada', cancelada: 'Cancelada' }
+const ESTADOS = { apartada: 'Apartada', liquidada: 'Liquidada', en_curso: 'Salón entregado', en_revision: 'En revisión (Limpieza)', realizada: 'Terminada', cancelada: 'Cancelada' }
 const RENTA = ['apartado', 'pago_total', 'liquidacion', 'reembolso_alimentos']
 
 async function detalleReserva(id, db = conexion, opciones = {}) {
@@ -343,7 +346,7 @@ async function detalleReserva(id, db = conexion, opciones = {}) {
 // Lista con filtro
 async function listaReservas(filtro = 'proximas') {
     const condiciones = {
-        proximas: "r.fecha_evento >= CURDATE() AND r.estado IN ('apartada', 'liquidada', 'en_curso')",
+        proximas: "((r.fecha_evento >= CURDATE() AND r.estado IN ('apartada', 'liquidada', 'en_curso')) OR r.estado = 'en_revision')",
         hoy: "r.fecha_evento = CURDATE() AND r.estado <> 'cancelada'",
         por_liquidar: "r.estado = 'apartada'",
         terminadas: "r.estado IN ('realizada', 'cancelada')",
@@ -454,8 +457,19 @@ async function entregarSalon(id, datos, usuario) {
     })
 }
 
-//recibir el salón al terminar y decidir la cuota
+// al terminar, el encargado recibe el salón y lo pasa a Limpieza
 async function recibirSalon(id, datos, usuario) {
+    return conReserva(id, async (db, r) => {
+        if (r.estado !== 'en_curso') throw new ErrorNegocio('Fiesta sin terminar.', 409)
+        await db.query("UPDATE reservas_salon SET estado = 'en_revision', recibido_en = NOW(), recibido_por = ? WHERE id = ?", [usuario.id, r.id])
+        await db.query("INSERT INTO tareas_limpieza (tipo, reserva_id, origen, creada_por) VALUES ('salon', ?, ?, ?)",
+            [r.id, `Fin del evento ${r.folio}`, usuario.id])
+        return { estado: 'en_revision', salon: r.salon }
+    })
+}
+
+// Valida lo que anota Limpieza al revisar el salón
+function leerRevisionSalon(datos) {
     datos = datos || {}
     const resultado = String(datos.resultado || '')
     if (!['limpio', 'sucio', 'danos'].includes(resultado)) throw new ErrorNegocio('Elige cómo se entregó el salón: limpio, sucio o con daños ;p.', 422)
@@ -466,21 +480,26 @@ async function recibirSalon(id, datos, usuario) {
         if (!Number.isFinite(costo) || costo <= 0 || costo > 500000) throw new ErrorNegocio('Escribe cuánto cuesta reparar los daños.', 422)
     }
     if (resultado === 'sucio' && descripcion.length < 5) throw new ErrorNegocio('Anota qué se dejó sucio.', 422)
-    return conReserva(id, async (db, r) => {
-        if (r.estado !== 'en_curso') throw new ErrorNegocio('Fiesta sin terminar.', 409)
-        let devuelto = 0, cargo = 0
-        if (resultado === 'limpio') {
-            devuelto = r.cuota_garantia
-            if (devuelto > 0) await registrarPago(db, r, usuario.id, 'devolucion_cuota', -devuelto, r.medio_cuota, r.cliente_nombre)
-        } else if (resultado === 'danos') {
-            cargo = redondear(Math.max(0, costo - r.cuota_garantia))
-        }
-        await db.query(
-            `UPDATE reservas_salon SET estado = 'realizada', recibido_en = NOW(), recibido_por = ?, resultado = ?, danos_descripcion = ?,
-                    costo_danos = ?, cargo_danos = ?, estado_cuota = ? WHERE id = ?`,
-            [usuario.id, resultado, descripcion || null, redondear(costo), cargo, resultado === 'limpio' ? 'devuelta' : 'cobrada', r.id])
-        return { resultado, devuelto, medio: r.medio_cuota, a: r.cliente_nombre, cargo, responsable: r.responsable_nombre }
-    })
+    return { resultado, descripcion, costo }
+}
+
+// Con la revisión de Limpieza se decide la cuota 
+async function revisarSalon(db, reservaId, revision, usuario) {
+    await db.query('SELECT id FROM reservas_salon WHERE id = ? FOR UPDATE', [reservaId])
+    const r = await detalleReserva(reservaId, db)
+    if (!r || r.estado !== 'en_revision') throw new ErrorNegocio('Ese salón no está esperando revisión.', 409)
+    const { resultado, descripcion, costo } = revision
+    let devuelto = 0, cargo = 0
+    if (resultado === 'limpio') {
+        devuelto = r.cuota_garantia
+        if (devuelto > 0) await registrarPago(db, r, usuario.id, 'devolucion_cuota', -devuelto, r.medio_cuota, r.cliente_nombre)
+    } else if (resultado === 'danos') {
+        cargo = redondear(Math.max(0, costo - r.cuota_garantia))
+    }
+    await db.query(
+        `UPDATE reservas_salon SET estado = 'realizada', resultado = ?, danos_descripcion = ?, costo_danos = ?, cargo_danos = ?, estado_cuota = ? WHERE id = ?`,
+        [resultado, descripcion || null, redondear(costo), cargo, resultado === 'limpio' ? 'devuelta' : 'cobrada', r.id])
+    return { resultado, devuelto, medio: r.medio_cuota, a: r.cliente_nombre, cargo, responsable: r.responsable_nombre, folio: r.folio }
 }
 
 // responsable paga el excedente de los daños
@@ -508,6 +527,6 @@ async function comprobante(id) {
 
 module.exports = {
     CAJA_SALONES, MEDIOS_PAGO, CONCEPTOS, terminos, folio, menuEventos, armarAlimentos, brincolinesLibres, validarPersonas,
-    crearReserva, detalleReserva, listaReservas, liquidar, cancelarAlimentos, entregarSalon, recibirSalon, cobrarDanos,
+    crearReserva, detalleReserva, listaReservas, liquidar, cancelarAlimentos, entregarSalon, recibirSalon, leerRevisionSalon, revisarSalon, cobrarDanos,
     contrato, comprobante, datosPdf
 }

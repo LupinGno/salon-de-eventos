@@ -1,0 +1,46 @@
+<%- include('../partials/encabezado') %>
+<%
+const colorEstado = { reservada: 'text-bg-warning', instalada: 'text-bg-info', no_instalada: 'text-bg-secondary', recolectada: 'text-bg-success', cancelada: 'text-bg-secondary' }
+const garantiaTexto = { retenida: 'En garantía', devuelta: 'Devuelta', cobrada: 'No se devolvió' }
+%>
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1 class="h3 mb-0">Rentas de brincolines</h1>
+    <p class="text-body-secondary mb-0">Qué se instala hoy, qué falta recoger y cómo quedó cada garantía.</p>
+  </div>
+  <a href="/brincolines" class="btn btn-marca"><i class="bi bi-plus-lg"></i> Nueva renta</a>
+</div>
+
+<%- include('_nav') %>
+
+<div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Filtrar rentas">
+  <% Object.entries(FILTROS).forEach(([k, v]) => { %>
+  <a href="/brincolines/rentas?filtro=<%= k %>" class="btn btn-sm <%= filtro === k ? 'btn-primary' : 'btn-outline-primary' %>"><%= v %></a>
+  <% }) %>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <% if (!filas.length) { %><p class="text-body-secondary p-4 mb-0">No hay rentas en esta lista.</p><% } else { %>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Folio</th><th>Día</th><th>Brincolín</th><th>Cliente y domicilio</th><th>Estado</th><th>Garantía</th></tr></thead>
+        <tbody>
+          <% filas.forEach(r => { %>
+          <tr>
+            <td class="text-nowrap"><a href="/brincolines/rentas/<%= r.id %>" class="fw-semibold"><%= r.folio %></a></td>
+            <td class="text-nowrap"><%= f.fechaCorta(r.fecha) %><div class="small text-body-secondary">recoger <%= r.recoger.split('-').reverse().join('/') %></div></td>
+            <td><%= r.brincolin %></td>
+            <td><%= r.cliente %> <span class="small text-body-secondary">· <%= r.telefono %></span><div class="small text-body-secondary"><%= r.direccion %></div></td>
+            <td><span class="badge <%= colorEstado[r.estado] %>"><%= r.estado_texto %></span><% if (r.pendiente) { %> <span class="badge text-bg-danger">decidir cambio</span><% } %></td>
+            <td class="small"><%= garantiaTexto[r.estado_garantia] %></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/pie') %>

@@ -3,7 +3,7 @@
 const tamanos = { chico: 'Chico', mediano: 'Mediano', grande: 'Grande' }
 const medios = { efectivo: 'efectivo', tarjeta: 'tarjeta', transferencia: 'transferencia' }
 const fechaLarga = iso => new Date(iso + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-const colorEstado = { apartada: 'text-bg-warning', liquidada: 'text-bg-primary', en_curso: 'text-bg-info', realizada: 'text-bg-success', cancelada: 'text-bg-secondary' }
+const colorEstado = { apartada: 'text-bg-warning', liquidada: 'text-bg-primary', en_curso: 'text-bg-info', en_revision: 'text-bg-info', realizada: 'text-bg-success', cancelada: 'text-bg-secondary' }
 const cuotaTexto = { retenida: 'En garantía', devuelta: 'Devuelta', cobrada: 'No se devolvió' }
 const resultados = { limpio: 'Limpio', sucio: 'Sucio', danos: 'Con daños' }
 const ineOculto = r.responsable_ine.replace(/^.{14}/, '••••••••••••••')
@@ -31,6 +31,9 @@ const m = r.mobiliario
 <% if (r.es_hoy && ['apartada', 'liquidada'].includes(r.estado)) { %>
 <div class="alert alert-info"><i class="bi bi-calendar-check"></i> Hoy es el evento: entrega el salón cuando llegue el responsable con su INE.</div>
 <% } %>
+<% if (r.estado === 'en_revision') { %>
+<div class="alert alert-info"><i class="bi bi-stars"></i> El salón se devolvió y está en la lista de Limpieza. Cuando lo revisen se decide la cuota.</div>
+<% } %>
 <% if (r.cargo_pendiente > 0) { %>
 <div class="alert alert-danger"><i class="bi bi-tools"></i> El responsable debe <strong><%= f.dinero(r.cargo_pendiente) %></strong> por daños.</div>
 <% } %>
@@ -47,7 +50,7 @@ const m = r.mobiliario
           <dt class="col-sm-4">Mobiliario</dt><dd class="col-sm-8"><%= m.sillas %> sillas, <%= m.mesas %> mesas, <%= m.manteles %> manteles blancos, bocina sin música<%= m.desechables ? `, ${m.desechables} juegos de desechables` : '' %></dd>
           <dt class="col-sm-4">Brincolines</dt><dd class="col-sm-8"><%= r.brincolines.map(b => b.nombre).join(', ') || 'Ninguno' %></dd>
           <% if (r.entregado_en) { %><dt class="col-sm-4">Salón entregado</dt><dd class="col-sm-8"><%= f.fechaCorta(r.entregado_en) %> por <%= r.entrego %></dd><% } %>
-          <% if (r.recibido_en) { %><dt class="col-sm-4">Salón recibido</dt><dd class="col-sm-8"><%= f.fechaCorta(r.recibido_en) %> por <%= r.recibio %>: <strong><%= resultados[r.resultado] %></strong><%= r.danos_descripcion ? ` — ${r.danos_descripcion}` : '' %><%= Number(r.costo_danos) > 0 ? ` (reparación ${f.dinero(r.costo_danos)})` : '' %></dd><% } %>
+          <% if (r.recibido_en) { %><dt class="col-sm-4">Salón recibido</dt><dd class="col-sm-8"><%= f.fechaCorta(r.recibido_en) %> por <%= r.recibio %>. <%= r.resultado ? 'Revisión de Limpieza:' : 'Limpieza lo está revisando.' %> <strong><%= resultados[r.resultado] || '' %></strong><%= r.danos_descripcion ? ` — ${r.danos_descripcion}` : '' %><%= Number(r.costo_danos) > 0 ? ` (reparación ${f.dinero(r.costo_danos)})` : '' %></dd><% } %>
         </dl>
       </div>
     </section>
@@ -168,29 +171,13 @@ const m = r.mobiliario
     <% } %>
 
     <% if (r.puede.recibir) { %>
-    <!-- US-48/49: recibir el salón y decidir la cuota -->
-    <form method="post" action="/salones/reservas/<%= r.id %>/recibir" class="card border-0 shadow-sm" id="form-recibir"
-          data-cuota="<%= r.cuota_garantia %>" data-paga="<%= r.cliente_nombre %>" data-medio="<%= medios[r.medio_cuota] %>" data-preguntar="">
+    <!-- US-64: al terminar, el salón pasa a Limpieza; con su revisión se decide la cuota -->
+    <form method="post" action="/salones/reservas/<%= r.id %>/recibir" class="card border-0 shadow-sm" id="form-devolver"
+          data-preguntar="El responsable devolvió el salón. Pasa a Limpieza, que revisa si quedó limpio, sucio o con daños y con eso se decide la cuota.">
       <div class="card-body p-4">
         <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-clipboard-check"></i> Recibir el salón</h2>
-        <div class="btn-group w-100 mb-2" role="group" aria-label="Cómo se entregó">
-          <input type="radio" class="btn-check" name="resultado" id="rec-limpio" value="limpio">
-          <label class="btn btn-outline-success" for="rec-limpio">Limpio</label>
-          <input type="radio" class="btn-check" name="resultado" id="rec-sucio" value="sucio">
-          <label class="btn btn-outline-warning" for="rec-sucio">Sucio</label>
-          <input type="radio" class="btn-check" name="resultado" id="rec-danos" value="danos">
-          <label class="btn btn-outline-danger" for="rec-danos">Daños</label>
-        </div>
-        <div class="campo-descripcion d-none mb-2">
-          <label class="form-label small mb-1" for="rec-desc">¿Qué pasó?</label>
-          <input id="rec-desc" name="descripcion" maxlength="255" class="form-control" placeholder="Basura sin recoger, mesa rota...">
-        </div>
-        <div class="campo-costo d-none mb-2">
-          <label class="form-label small mb-1" for="rec-costo">Costo de reparar</label>
-          <div class="input-group"><span class="input-group-text">$</span><input id="rec-costo" name="costo" type="number" min="1" step="0.5" class="form-control"></div>
-        </div>
-        <p class="small fw-semibold que-pasa mb-3"></p>
-        <button class="btn btn-marca w-100"><i class="bi bi-check2-all"></i> Recibir y cerrar</button>
+        <p class="small text-body-secondary">Cuando termine la fiesta y el responsable lo entregue. Limpieza lo revisa y con eso se decide la cuota de <%= f.dinero(r.cuota_garantia) %>.</p>
+        <button class="btn btn-marca w-100"><i class="bi bi-check2-all"></i> Recibir y mandar a Limpieza</button>
       </div>
     </form>
     <% } %>

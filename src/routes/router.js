@@ -8,6 +8,8 @@ const catalogos = require('../controllers/catalogosController')
 const inventarioCtl = require('../controllers/inventarioController')
 const salonesCtl = require('../controllers/salonesController')
 const reservasCtl = require('../controllers/reservasController')
+const brincolinesCtl = require('../controllers/brincolinesController')
+const limpiezaCtl = require('../controllers/limpiezaController')
 const rentas = require('../controllers/rentasCatalogoController')
 const api = require('../controllers/apiController')
 const cajaCtl = require('../controllers/cajaController')
@@ -20,6 +22,8 @@ const formatos = require('../controllers/formatos')
 const soloAdmin = [autenticado, permitirRoles(ROLES.ADMIN)]
 const catalogo = [autenticado, permitirModulo('catalogos')]
 const enSalones = [autenticado, permitirModulo('salones')]
+const enBrincolines = [autenticado, permitirModulo('brincolines')]
+const enLimpieza = [autenticado, permitirModulo('limpieza')]
 const conImagen = campoImagen('archivo')
 
 // Mensajes de éxito comunes
@@ -33,10 +37,21 @@ const MENSAJES = {
     'cancelada-reembolso': 'Cancelación aprobada con reembolso: devuelve el dinero por el mismo medio con que pagó.',
     movimiento: 'Movimiento de inventario registrado.',
     'reserva-creada': 'Reserva guardada con su contrato firmado.',
+    'renta-creada': 'Renta guardada con su contrato firmado.',
+    'brincolin-instalado': 'Brincolín instalado en el domicilio.',
+    'brincolin-no-instalado': 'No se instaló: la renta no se reembolsa y la garantía se devolvió por el mismo medio.',
+    'brincolin-recogido': 'Brincolín recogido: pasa a Limpieza para revisarlo.',
+    'falla-resuelta': 'Listo: se aplicó lo que eligió el cliente. Los movimientos de dinero están en los pagos.',
+    'modelo-cambiado': 'Modelo cambiado. Si había diferencia, aparece en los pagos.',
+    'renta-cancelada': 'Renta cancelada: la renta no se reembolsa; la garantía se devolvió por el mismo medio.',
+    'dano-reportado': 'Daño registrado.',
+    'dano-reportado-rentas': 'Daño registrado. Sus rentas próximas quedaron en "Fallas por resolver" para que el cliente elija.',
+    reparado: 'El brincolín regresó de reparación y pasó a Limpieza.',
+    revisado: 'Revisión guardada.',
+    'salon-recibido': 'Salón recibido: pasa a Limpieza, que decide la cuota.',
     'reserva-liquidada': 'Renta liquidada: ya se puede entregar el salón el día del evento.',
     'alimentos-cancelados': 'Alimentos cancelados. Si hubo devolución, aparece en los pagos con el medio y la persona.',
     'salon-entregado': 'Salón entregado al responsable.',
-    'salon-recibido': 'Salón recibido. Revisa en los pagos si hay cuota que devolver o cargo por daños.',
     'danos-cobrados': 'Cargo por daños cobrado al responsable.',
     'cancelacion-solicitada': 'Solicitud enviada: un administrador debe aprobarla.',
     'cancelacion-rechazada': 'La solicitud de cancelación se rechazó.',
@@ -112,6 +127,27 @@ router.post('/salones/reservas/:id/recibir', enSalones, reservasCtl.recibir)
 router.post('/salones/reservas/:id/cobrar-danos', enSalones, reservasCtl.cobrarDanos)
 router.get('/salones/reservas/:id/contrato.pdf', enSalones, reservasCtl.contrato)
 router.get('/salones/reservas/:id/comprobante.pdf', enSalones, reservasCtl.comprobante)
+// renta de brincolines a domicilio 
+router.get('/brincolines', enBrincolines, brincolinesCtl.catalogo)
+router.get('/brincolines/rentar', enBrincolines, brincolinesCtl.formulario)
+router.post('/brincolines/rentas', enBrincolines, brincolinesCtl.crear)
+router.get('/brincolines/rentas', enBrincolines, brincolinesCtl.lista)
+router.get('/brincolines/rentas/:id', enBrincolines, brincolinesCtl.detalle)
+router.post('/brincolines/rentas/:id/instalar', enBrincolines, brincolinesCtl.instalar)
+router.post('/brincolines/rentas/:id/no-instalar', enBrincolines, brincolinesCtl.noInstalar)
+router.post('/brincolines/rentas/:id/recoger', enBrincolines, brincolinesCtl.recoger)
+router.get('/brincolines/rentas/:id/contrato.pdf', enBrincolines, brincolinesCtl.contrato)
+router.get('/brincolines/rentas/:id/comprobante.pdf', enBrincolines, brincolinesCtl.comprobante)
+// Sprint 10: cambios, fallas, equipo y limpieza
+router.post('/brincolines/rentas/:id/resolver', enBrincolines, brincolinesCtl.resolver)
+router.post('/brincolines/rentas/:id/cambiar', enBrincolines, brincolinesCtl.cambiar)
+router.post('/brincolines/rentas/:id/cancelar', enBrincolines, brincolinesCtl.cancelar)
+router.get('/brincolines/equipo', enBrincolines, brincolinesCtl.equipo)
+router.post('/brincolines/equipo/:id/dano', enBrincolines, brincolinesCtl.reportarDano)
+router.post('/brincolines/equipo/:id/reparado', enBrincolines, brincolinesCtl.reparado)
+router.get('/limpieza', enLimpieza, limpiezaCtl.pendientes)
+router.post('/limpieza/tareas/:id/brincolin', enLimpieza, limpiezaCtl.revisarBrincolin)
+router.post('/limpieza/tareas/:id/salon', enLimpieza, limpiezaCtl.revisarSalon)
 // inventario de ingredientes
 router.get('/catalogos/inventario', catalogo, inventarioCtl.vista)
 router.get('/catalogos/inventario/:id', catalogo, inventarioCtl.historial)

@@ -1,0 +1,154 @@
+<%- include('../partials/encabezado') %>
+<%
+const medios = { efectivo: 'efectivo', tarjeta: 'tarjeta', transferencia: 'transferencia' }
+const fechaLarga = iso => new Date(iso + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+const colorEstado = { reservada: 'text-bg-warning', instalada: 'text-bg-info', no_instalada: 'text-bg-secondary', recolectada: 'text-bg-success', cancelada: 'text-bg-secondary' }
+const garantiaTexto = { retenida: 'En garantía', devuelta: 'Devuelta', cobrada: 'No se devolvió' }
+%>
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1 class="h3 mb-0">Renta <%= r.folio %> <span class="badge <%= colorEstado[r.estado] %> fs-6 align-middle"><%= r.estado_texto %></span></h1>
+    <p class="text-body-secondary mb-0"><%= r.brincolin %> · <%= fechaLarga(r.fecha) %> · Registró <%= r.encargado %></p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="/brincolines/rentas/<%= r.id %>/contrato.pdf" target="_blank" class="btn btn-outline-primary"><i class="bi bi-file-earmark-text"></i> Contrato firmado</a>
+    <a href="/brincolines/rentas/<%= r.id %>/comprobante.pdf" target="_blank" class="btn btn-outline-primary"><i class="bi bi-receipt"></i> Comprobante</a>
+  </div>
+</div>
+
+<%- include('_nav') %>
+<%- include('../partials/errores', { errores }) %>
+
+<% if (r.puede.instalar) { %>
+<div class="alert alert-info"><i class="bi bi-truck"></i> Hoy se instala en <strong><%= r.direccion %></strong>.</div>
+<% } else if (r.estado === 'instalada' && !r.puede.recoger) { %>
+<div class="alert alert-info"><i class="bi bi-house-check"></i> Está instalado. No hay devoluciones el mismo día: se recoge a partir del <strong><%= r.recoger.split('-').reverse().join('/') %></strong>.</div>
+<% } else if (r.puede.recoger) { %>
+<div class="alert alert-warning"><i class="bi bi-truck"></i> Toca recogerlo en <strong><%= r.direccion %></strong>.</div>
+<% } else if (r.estado === 'recolectada' && r.estado_garantia === 'retenida') { %>
+<div class="alert alert-info"><i class="bi bi-stars"></i> Se recogió y está en Limpieza. La garantía se decide cuando Limpieza revise el brincolín.</div>
+<% } else if (r.estado === 'no_instalada') { %>
+<div class="alert alert-secondary"><i class="bi bi-x-octagon"></i> No se instaló: <%= r.motivo_no_instalado %>. La renta no se reembolsa; la garantía se devolvió.</div>
+<% } %>
+<% if (extra.pendiente) { %>
+<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> <%= extra.pendiente.descripcion %>. El cliente elige: reembolso completo, otra fecha u otro modelo.</div>
+<% } %>
+
+<div class="row g-4">
+  <div class="col-xl-8 d-grid gap-4 align-content-start">
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Renta</h2>
+        <div class="row g-3">
+          <% if (r.imagen) { %><div class="col-md-4"><img src="<%= r.imagen %>" class="img-salon rounded w-100" alt="Foto de <%= r.brincolin %>"></div><% } %>
+          <div class="<%= r.imagen ? 'col-md-8' : 'col-12' %>">
+            <dl class="row small mb-0">
+              <dt class="col-sm-5">Brincolín</dt><dd class="col-sm-7"><%= r.brincolin %> (<%= Number(r.largo_m) %> × <%= Number(r.ancho_m) %> × <%= Number(r.alto_m) %> m)</dd>
+              <dt class="col-sm-5">Día de renta</dt><dd class="col-sm-7"><%= fechaLarga(r.fecha) %></dd>
+              <dt class="col-sm-5">Se recoge</dt><dd class="col-sm-7"><%= fechaLarga(r.recoger) %></dd>
+              <dt class="col-sm-5">Domicilio</dt><dd class="col-sm-7"><%= r.direccion %><% if (r.referencias) { %><div class="text-body-secondary"><%= r.referencias %></div><% } %></dd>
+              <dt class="col-sm-5">Espacio declarado</dt><dd class="col-sm-7"><%= Number(r.espacio_largo) %> × <%= Number(r.espacio_ancho) %> m, con corriente y terreno firme</dd>
+              <% if (r.instalado_en) { %><dt class="col-sm-5">Instalado</dt><dd class="col-sm-7"><%= f.fechaCorta(r.instalado_en) %> por <%= r.instalo %></dd><% } %>
+              <% if (r.recolectado_en) { %><dt class="col-sm-5">Recogido</dt><dd class="col-sm-7"><%= f.fechaCorta(r.recolectado_en) %> por <%= r.recogio %></dd><% } %>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Quién renta y paga <% if (r.firmado) { %><span class="badge text-bg-success">firmó</span><% } %></h2>
+        <div class="small"><%= r.cliente_nombre %> · Tel. <%= r.cliente_telefono %><%= r.cliente_correo ? ` · ${r.cliente_correo}` : '' %></div>
+        <div class="small text-body-secondary">Pagó con <strong><%= medios[r.medio_pago] %></strong>: las devoluciones van por ese medio.</div>
+      </div>
+    </section>
+
+    <% if (extra.incidencias && extra.incidencias.length) { %>
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Incidencias y cambios</h2>
+        <ul class="list-unstyled small mb-0">
+          <% extra.incidencias.forEach(i => { %>
+          <li class="py-2 border-bottom"><strong><%= i.fecha_texto %></strong> · <%= i.tipo_texto %>: <%= i.descripcion %>
+            <span class="text-body-secondary">— <%= i.accion_texto %><%= i.reemplazo ? ` (${i.reemplazo})` : '' %><%= i.fecha_nueva ? ` → ${i.fecha_nueva.split('-').reverse().join('/')}` : '' %> · <%= i.usuario %></span></li>
+          <% }) %>
+        </ul>
+      </div>
+    </section>
+    <% } %>
+
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Pagos y devoluciones (Caja 3)</h2>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Fecha</th><th>Concepto</th><th>Persona</th><th>Medio</th><th>Atendió</th><th class="text-end">Monto</th></tr></thead>
+            <tbody>
+              <% r.pagos.forEach(p => { %>
+              <tr>
+                <td class="text-nowrap"><%= p.creado_texto %></td>
+                <td><%= p.concepto_texto %><% if (p.referencia) { %><div class="small text-body-secondary">Ref. <%= p.referencia %></div><% } %></td>
+                <td><%= p.persona %></td><td><%= medios[p.medio] %></td><td class="small"><%= p.usuario %></td>
+                <td class="text-end text-nowrap fw-semibold <%= p.monto < 0 ? 'text-danger' : '' %>"><%= p.monto < 0 ? '−' + f.dinero(-p.monto) : f.dinero(p.monto) %></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-xl-4 d-grid gap-4 align-content-start">
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Importes</h2>
+        <table class="table table-sm small mb-0">
+          <tr><td>Renta del día</td><td class="text-end"><%= f.dinero(r.precio) %></td></tr>
+          <tr><td>Garantía</td><td class="text-end"><%= f.dinero(r.garantia) %> <span class="badge text-bg-light"><%= garantiaTexto[r.estado_garantia] %></span></td></tr>
+          <tr class="fw-semibold"><td>Neto en caja</td><td class="text-end"><%= f.dinero(r.neto) %></td></tr>
+        </table>
+      </div>
+    </section>
+
+    <% if (r.puede.instalar) { %>
+    <!-- US-55/56: instalar el día de la renta -->
+    <form method="post" action="/brincolines/rentas/<%= r.id %>/instalar" class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-tools"></i> Instalar</h2>
+        <p class="small text-body-secondary">Revisa el sitio antes de instalar.</p>
+        <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="corriente" value="1" id="ins-corriente"><label class="form-check-label small" for="ins-corriente">Hay toma de corriente</label></div>
+        <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="terreno" value="1" id="ins-terreno"><label class="form-check-label small" for="ins-terreno">Terreno plano y firme</label></div>
+        <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="espacio" value="1" id="ins-espacio"><label class="form-check-label small" for="ins-espacio">Espacio libre suficiente, sin cables ni ramas</label></div>
+        <button class="btn btn-marca w-100"><i class="bi bi-check2-circle"></i> Instalado</button>
+      </div>
+    </form>
+    <form method="post" action="/brincolines/rentas/<%= r.id %>/no-instalar" class="card border-0 shadow-sm"
+          data-preguntar="No se instala: la renta no se reembolsa y la garantía de <%= f.dinero(r.garantia) %> se devuelve a <%= r.cliente_nombre %> en <%= medios[r.medio_pago] %>.">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-x-octagon"></i> No se puede instalar</h2>
+        <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="falla_corriente" value="1" id="no-corriente"><label class="form-check-label small" for="no-corriente">No hay toma de corriente</label></div>
+        <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="falla_terreno" value="1" id="no-terreno"><label class="form-check-label small" for="no-terreno">El terreno no es apto</label></div>
+        <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="falla_espacio" value="1" id="no-espacio"><label class="form-check-label small" for="no-espacio">No hay espacio suficiente</label></div>
+        <input name="motivo" maxlength="150" class="form-control form-control-sm mb-3" placeholder="Nota (opcional)">
+        <button class="btn btn-outline-danger w-100">No se instala</button>
+      </div>
+    </form>
+    <% } %>
+
+    <% if (r.puede.recoger) { %>
+    <form method="post" action="/brincolines/rentas/<%= r.id %>/recoger" class="card border-0 shadow-sm" data-preguntar="Se marca como recogido en <%= r.direccion %> y pasa a Limpieza.">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-truck"></i> Recoger</h2>
+        <p class="small text-body-secondary">Se recoge en el mismo domicilio. Después Limpieza lo revisa y decide la garantía.</p>
+        <button class="btn btn-marca w-100"><i class="bi bi-box-arrow-in-down"></i> Recogido</button>
+      </div>
+    </form>
+    <% } %>
+
+    <%- include('_acciones_cambios', { r, extra }) %>
+  </div>
+</div>
+
+<%- include('../partials/pie', { scriptsExtra: ['/js/brincolines.js'] }) %>

@@ -1,0 +1,61 @@
+<%- include('../partials/encabezado') %>
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <h1 class="h3 mb-0">Renta de brincolines</h1>
+  <p class="text-body-secondary mb-0">Brincolines disponibles por día completo, a domicilio: el personal lo instala ese día y lo recoge al día siguiente.</p>
+</div>
+
+<%- include('_nav') %>
+<%- include('../partials/errores', { errores }) %>
+
+<form method="get" action="/brincolines" class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-3 d-flex flex-wrap align-items-end gap-3">
+    <div>
+      <label class="form-label small mb-1" for="fecha">Día de la renta</label>
+      <input id="fecha" name="fecha" type="date" class="form-control" min="<%= manana %>" value="<%= q.fecha %>" required>
+    </div>
+    <button class="btn btn-marca"><i class="bi bi-search"></i> Ver disponibles</button>
+    <span class="small text-body-secondary">Se reserva con al menos un día de anticipación.</span>
+  </div>
+</form>
+
+<% if (resultado) { %>
+<div class="d-flex flex-wrap align-items-baseline gap-2 mb-3">
+  <h2 class="h5 mb-0"><%= new Date(resultado.fecha + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) %></h2>
+  <span class="badge <%= resultado.disponibles ? 'text-bg-success' : 'text-bg-danger' %>"><%= resultado.disponibles %> disponible(s)</span>
+  <span class="small text-body-secondary">Se recoge el <%= resultado.recoger.split('-').reverse().join('/') %></span>
+</div>
+<div class="row g-3">
+  <% resultado.brincolines.forEach(b => { %>
+  <div class="col-sm-6 col-xl-4">
+    <div class="card h-100 border-0 shadow-sm tarjeta-salon <%= b.disponible ? '' : 'no-disponible' %>">
+      <% if (b.imagen) { %><img src="<%= b.imagen %>" class="card-img-top img-salon" alt="Foto de <%= b.nombre %>"><% } %>
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <h3 class="h6 mb-1"><%= b.nombre %></h3>
+          <span class="badge <%= b.disponible ? 'text-bg-success' : 'text-bg-secondary' %>"><%= b.disponible ? 'Disponible' : 'No disponible' %></span>
+        </div>
+        <% if (b.descripcion) { %><p class="small text-body-secondary mb-2"><%= b.descripcion %></p><% } %>
+        <ul class="small list-unstyled mb-2">
+          <li><i class="bi bi-rulers"></i> <%= b.largo %> × <%= b.ancho %> × <%= b.alto %> m</li>
+          <li><i class="bi bi-bounding-box"></i> Espacio libre: <%= b.espacio.largo %> × <%= b.espacio.ancho %> m</li>
+          <li><i class="bi bi-plug"></i> Necesita toma de corriente</li>
+        </ul>
+        <table class="table table-sm small mb-2">
+          <tr><td>Renta del día</td><td class="text-end"><%= f.dinero(b.precio) %></td></tr>
+          <tr><td>Garantía <span class="text-body-secondary">(se devuelve)</span></td><td class="text-end"><%= f.dinero(b.garantia) %></td></tr>
+        </table>
+        <div class="mt-auto">
+          <% if (b.disponible) { %>
+            <a class="btn btn-marca w-100" href="/brincolines/rentar?<%= new URLSearchParams({ brincolin_id: b.id, fecha: resultado.fecha }) %>"><i class="bi bi-calendar-plus"></i> Rentar este brincolín</a>
+          <% } else { %>
+            <div class="alert alert-light border small py-2 mb-0"><i class="bi bi-x-circle text-danger"></i> <%= b.motivo %></div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% }) %>
+</div>
+<% } %>
+
+<%- include('../partials/pie') %>

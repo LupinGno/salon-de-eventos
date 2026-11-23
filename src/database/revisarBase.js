@@ -12,6 +12,10 @@ const MIGRACIONES = [
     { archivo: '007_modulo4_renta_salones.sql', tabla: 'pagos_reserva' },
     { archivo: '007_modulo4_renta_salones.sql', tabla: 'contratos_salon' },
     { archivo: '007_modulo4_renta_salones.sql', tabla: 'reservas_salon', columna: 'entregado_en' },
+    { archivo: '008_sprint9_renta_brincolines.sql', tabla: 'rentas_brincolin' },
+    { archivo: '008_sprint9_renta_brincolines.sql', tabla: 'pagos_renta' },
+    { archivo: '009_modulo5_limpieza_incidencias.sql', tabla: 'tareas_limpieza' },
+    { archivo: '009_modulo5_limpieza_incidencias.sql', tabla: 'incidencias' },
 ]
 
 async function revisar() {

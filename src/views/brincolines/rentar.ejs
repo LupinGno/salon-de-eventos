@@ -1,0 +1,113 @@
+<%- include('../partials/encabezado') %>
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <h1 class="h3 mb-0">Rentar <%= b.nombre %></h1>
+  <p class="text-body-secondary mb-0"><%= fechaLarga(cat.fecha) %> · se recoge el <%= cat.recoger.split('-').reverse().join('/') %></p>
+</div>
+
+<%- include('_nav') %>
+<div id="errores-renta" class="alert alert-danger d-none" role="alert"></div>
+
+<form id="form-renta" class="row g-4" novalidate>
+  <div class="col-xl-8 d-grid gap-4">
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><span class="paso">1</span> Quién renta y paga</h2>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="cli-nombre">Nombre completo</label>
+            <input id="cli-nombre" class="form-control" maxlength="100" autocomplete="off">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label" for="cli-telefono">Teléfono</label>
+            <input id="cli-telefono" class="form-control" inputmode="tel" maxlength="14" placeholder="10 dígitos">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label" for="cli-correo">Correo <span class="text-body-secondary small">(opcional)</span></label>
+            <input id="cli-correo" type="email" class="form-control" maxlength="100">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><span class="paso">2</span> Domicilio y sitio de instalación</h2>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label" for="direccion">Domicilio</label>
+            <input id="direccion" class="form-control" maxlength="255" placeholder="Calle, número, colonia y ciudad">
+            <div class="form-text">Ahí se instala y ahí mismo se recoge al día siguiente.</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="referencias">Referencias <span class="text-body-secondary small">(opcional)</span></label>
+            <input id="referencias" class="form-control" maxlength="255" placeholder="Entre calles, color de la casa…">
+          </div>
+          <div class="col-sm-6 col-md-3">
+            <label class="form-label" for="espacio-largo">Largo libre (m)</label>
+            <input id="espacio-largo" type="number" min="0.5" max="100" step="0.1" class="form-control">
+          </div>
+          <div class="col-sm-6 col-md-3">
+            <label class="form-label" for="espacio-ancho">Ancho libre (m)</label>
+            <input id="espacio-ancho" type="number" min="0.5" max="100" step="0.1" class="form-control">
+          </div>
+          <div class="col-md-6 small text-body-secondary align-self-end">
+            <i class="bi bi-rulers"></i> <%= b.nombre %> mide <%= b.largo %> × <%= b.ancho %> × <%= b.alto %> m: necesita al menos
+            <strong><%= b.espacio.largo %> × <%= b.espacio.ancho %> m</strong> libres.
+          </div>
+          <div class="col-12" id="aviso-espacio"></div>
+          <div class="col-md-6">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="toma-corriente">
+              <label class="form-check-label" for="toma-corriente">Hay toma de corriente cerca del lugar</label>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="terreno-habil">
+              <label class="form-check-label" for="terreno-habil">El terreno es plano y firme (pasto, tierra o piso)</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><span class="paso">3</span> Términos y condiciones</h2>
+        <ol class="small terminos mb-3">
+          <% terminos.forEach(t => { %><li><%= t %></li><% }) %>
+        </ol>
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" id="acepta">
+          <label class="form-check-label fw-semibold" for="acepta">El cliente leyó y acepta los términos y condiciones</label>
+        </div>
+        <div class="d-flex justify-content-between align-items-end mb-1">
+          <label class="form-label mb-0" for="firma">Firma del cliente</label>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="firma-borrar"><i class="bi bi-eraser"></i> Borrar</button>
+        </div>
+        <canvas id="firma" class="firma-lienzo" aria-label="Recuadro para firmar con el dedo o el mouse"></canvas>
+        <div class="form-text">Se agrega al contrato PDF.</div>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="card border-0 shadow-sm resumen-fijo">
+      <div class="card-body p-4">
+        <% if (b.imagen) { %><img src="<%= b.imagen %>" class="img-salon rounded mb-3 w-100" alt="Foto de <%= b.nombre %>"><% } %>
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-receipt"></i> Cobro</h2>
+        <table class="table table-sm small mb-2">
+          <tr><td>Renta del día</td><td class="text-end"><%= f.dinero(b.precio) %></td></tr>
+          <tr><td>Garantía <span class="text-body-secondary">(se devuelve si regresa en condiciones)</span></td><td class="text-end"><%= f.dinero(b.garantia) %></td></tr>
+          <tr class="fs-5 fw-bold"><td>Se cobra hoy</td><td class="text-end"><%= f.dinero(b.precio + b.garantia) %></td></tr>
+        </table>
+        <%- include('../salones/_pago', { prefijo: 'renta', monto: b.precio + b.garantia }) %>
+        <button type="submit" class="btn btn-marca btn-lg w-100 mt-3" id="btn-rentar"><i class="bi bi-pen"></i> Confirmar y generar contrato</button>
+        <p class="small text-body-secondary mt-2 mb-0">Al confirmar se cobra, se guarda la renta y se genera el contrato PDF con la firma.</p>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script type="application/json" id="datos-renta"><%- JSON.stringify({ brincolin_id: b.id, fecha: cat.fecha, minimo: b.espacio }).replace(/</g, '\\u003c') %></script>
+<%- include('../partials/pie', { scriptsExtra: ['/js/brincolines.js'] }) %>

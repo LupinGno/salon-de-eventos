@@ -10,7 +10,7 @@ const descartarSubida = req => { if (req.file) borrarArchivo('/uploads/' + req.f
 
 const TAMANOS = ['chico', 'mediano', 'grande']
 const ESTADOS_BRINCOLIN = {
-    disponible: 'Disponible', en_limpieza: 'En limpieza', en_reparacion: 'En reparación', baja: 'Dado de baja'
+    disponible: 'Disponible', rentado: 'Rentado (en domicilio)', en_limpieza: 'En limpieza', en_reparacion: 'En reparación', baja: 'Dado de baja'
 }
 // tamaños
 const MAX_BRINCOLINES = { chico: 1, mediano: 1, grande: 2 }
@@ -256,6 +256,11 @@ exports.cambiarEstadoBrincolin = async (req, res, next) => {
         const estado = req.body.estado
         if (!id || !Object.keys(ESTADOS_BRINCOLIN).includes(estado)) return res.redirect(conError('/catalogos/brincolines', 'Estado no válido.'))
         await conexion.query('UPDATE brincolines SET estado = ? WHERE id = ?', [estado, id])
+        if (['en_reparacion', 'baja'].includes(estado)) {
+            const [[b]] = await conexion.query('SELECT nombre FROM brincolines WHERE id = ?', [id])
+            await require('./brincolinesService').marcarRentasAfectadas(conexion, id,
+                `${b.nombre} ${estado === 'baja' ? 'se dio de baja' : 'está en reparación'} (desde Catálogos)`, req.usuario.id)
+        }
         res.redirect('/catalogos/brincolines?ok=guardado')
     } catch (e) { next(e) }
 }
