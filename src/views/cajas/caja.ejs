@@ -1,0 +1,137 @@
+<%- include('../partials/encabezado') %>
+<%
+const medios = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' }
+const puedeCerrar = turno && (turno.usuario_id === usuario.id || usuario.rol === 'Administrador')
+const signo = n => n < 0 ? '−' + f.dinero(-n) : (n > 0 ? '+' : '') + f.dinero(n)
+%>
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1 class="h3 mb-0"><%= caja.nombre %> <% if (turno) { %><span class="badge text-bg-success fs-6 align-middle">Abierta</span><% } else { %><span class="badge text-bg-secondary fs-6 align-middle">Cerrada</span><% } %></h1>
+    <p class="text-body-secondary mb-0"><% if (turno) { %>Turno <%= 'T-' + String(turno.id).padStart(4, '0') %> de <%= turno.cajero %> desde <%= f.fechaCorta(turno.abierto_en) %><% } else { %>Abre el turno contando el fondo inicial<% } %></p>
+  </div>
+  <div class="d-flex gap-2 align-items-center">
+    <span class="badge rounded-pill estado-conexion" data-estado-conexion aria-live="polite"><i class="bi bi-circle-fill"></i> Conectando…</span>
+    <a href="/cajas/movimientos?caja=<%= caja.id %>" class="btn btn-outline-primary"><i class="bi bi-list-columns-reverse"></i> Movimientos</a>
+  </div>
+</div>
+
+<%- include('_nav') %>
+<%- include('../partials/errores', { errores }) %>
+
+<% if (!turno) { %>
+<div class="row g-4">
+  <div class="col-lg-6">
+    <!-- US-67: apertura con fondo inicial -->
+    <form method="post" action="/cajas/<%= caja.id %>/turno" class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-unlock"></i> Abrir turno</h2>
+        <label class="form-label" for="fondo">Fondo inicial (el cambio con que abres)</label>
+        <div class="input-group mb-3"><span class="input-group-text">$</span>
+          <input id="fondo" name="fondo" type="number" min="0" max="50000" step="0.5" class="form-control" required inputmode="decimal"></div>
+        <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="confirmo" value="1" id="confirmo" required>
+          <label class="form-check-label small" for="confirmo">Conté el fondo físicamente y coincide</label></div>
+        <button class="btn btn-marca w-100"><i class="bi bi-unlock"></i> Abrir caja</button>
+      </div>
+    </form>
+  </div>
+  <div class="col-lg-6">
+    <%- include('_cortes', { cortes }) %>
+  </div>
+</div>
+<% } else { %>
+<div class="row g-4">
+  <div class="col-xl-8 d-grid gap-4 align-content-start">
+    <section class="card border-0 shadow-sm" id="saldo-turno" data-en-vivo>
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Saldo del turno</h2>
+        <%- include('_saldo', { resumen }) %>
+        <% if (pendientes.length) { %>
+        <div class="alert alert-warning small mt-3 mb-0"><i class="bi bi-hourglass-split"></i> <%= pendientes.length %> salida(s) esperan la aprobación del administrador (no se han descontado):
+          <% pendientes.forEach(p => { %><div>· <%= p.clase_texto %> de <%= f.dinero(-p.monto) %><%= p.responsable ? ` para ${p.responsable}` : '' %>: <%= p.concepto %></div><% }) %>
+        </div>
+        <% } %>
+      </div>
+    </section>
+    <section class="card border-0 shadow-sm" id="movs-turno" data-en-vivo>
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Movimientos del turno</h2>
+        <%- include('_tabla_movs', { filas }) %>
+      </div>
+    </section>
+    <% if (arqueos.length) { %>
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Arqueos del turno</h2>
+        <ul class="list-unstyled small mb-0">
+          <% arqueos.forEach(a => { %>
+          <li class="py-1 border-bottom"><strong><%= String(a.creado_en).slice(11, 16) %></strong> · <%= a.usuario %> contó <%= f.dinero(a.efectivo_contado) %> (sistema <%= f.dinero(a.efectivo_esperado) %>)
+            <span class="<%= Number(a.diferencia) === 0 ? 'text-success' : 'text-danger' %> fw-semibold"><%= Number(a.diferencia) === 0 ? 'cuadra' : signo(Number(a.diferencia)) %></span><%= a.observaciones ? ` — ${a.observaciones}` : '' %></li>
+          <% }) %>
+        </ul>
+      </div>
+    </section>
+    <% } %>
+  </div>
+  <div class="col-xl-4 d-grid gap-4 align-content-start">
+    <!-- US-69: préstamos, vales, gastos e ingresos -->
+    <form method="post" action="/cajas/<%= caja.id %>/extras" class="card border-0 shadow-sm" id="form-extra">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-plus-slash-minus"></i> Movimiento extra</h2>
+        <label class="form-label small mb-1" for="clase">Tipo</label>
+        <select id="clase" name="clase" class="form-select mb-2" required>
+          <% Object.entries(CLASES).forEach(([k, v]) => { %><option value="<%= k %>"><%= v %></option><% }) %>
+        </select>
+        <label class="form-label small mb-1" for="monto">Monto</label>
+        <div class="input-group mb-2"><span class="input-group-text">$</span><input id="monto" name="monto" type="number" min="0.01" max="20000" step="0.01" class="form-control" required></div>
+        <label class="form-label small mb-1" for="medio">Medio</label>
+        <select id="medio" name="medio" class="form-select mb-2">
+          <% Object.entries(medios).forEach(([k, v]) => { %><option value="<%= k %>"><%= v %></option><% }) %>
+        </select>
+        <label class="form-label small mb-1" for="responsable_id">Responsable (quién recibe)</label>
+        <select id="responsable_id" name="responsable_id" class="form-select mb-2">
+          <option value="">—</option>
+          <% empleados.forEach(e => { %><option value="<%= e.id %>"><%= e.nombre %> · <%= e.rol %></option><% }) %>
+        </select>
+        <label class="form-label small mb-1" for="concepto">Para qué</label>
+        <input id="concepto" name="concepto" maxlength="150" class="form-control mb-3" placeholder="Gasolina para el reparto" required>
+        <button class="btn btn-marca w-100">Registrar</button>
+        <p class="small text-body-secondary mt-2 mb-0">Préstamos, vales y gastos salen en negativo<%= usuario.rol === 'Administrador' ? '' : ' cuando el administrador los aprueba' %>.</p>
+      </div>
+    </form>
+
+    <!-- US-70: arqueo sin cerrar -->
+    <form method="post" action="/cajas/<%= caja.id %>/arqueo" class="card border-0 shadow-sm" id="form-arqueo" data-esperado="<%= resumen.saldo.efectivo %>">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-calculator"></i> Arqueo</h2>
+        <p class="small text-body-secondary">Cuenta el efectivo del cajón sin ver el sistema. La diferencia queda registrada.</p>
+        <label class="form-label small mb-1" for="arq-contado">Efectivo contado</label>
+        <div class="input-group"><span class="input-group-text">$</span><input id="arq-contado" name="contado" type="number" min="0" step="0.5" class="form-control" required></div>
+        <div class="small mt-1 texto-diferencia"></div>
+        <input name="observaciones" maxlength="255" class="form-control form-control-sm mt-2 mb-3" placeholder="Si no cuadra, ¿qué pasó?">
+        <button class="btn btn-outline-primary w-100">Guardar arqueo</button>
+      </div>
+    </form>
+
+    <% const esForzado = puedeCerrar && turno.usuario_id !== usuario.id %>
+    <% if (puedeCerrar) { %>
+    <!-- US-70 y US-71: corte al cerrar el turno -->
+    <form method="post" action="/cajas/<%= caja.id %>/cerrar" class="card border-0 shadow-sm <%= esForzado ? 'border-warning' : '' %>" id="form-cerrar" data-esperado="<%= resumen.saldo.efectivo %>"
+          data-preguntar="Se cierra el turno de <%= turno.cajero %> y se genera el corte. Ya no se podrá cobrar en este turno.">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-lock"></i> Cerrar turno y hacer corte</h2>
+        <% if (esForzado) { %><p class="small text-warning"><i class="bi bi-exclamation-triangle"></i> El turno lo abrió <%= turno.cajero %>: este es un cierre forzado y queda en la bitácora.</p><% } %>
+        <label class="form-label small mb-1" for="cierre-contado">Efectivo contado al cerrar</label>
+        <div class="input-group"><span class="input-group-text">$</span><input id="cierre-contado" name="contado" type="number" min="0" step="0.5" class="form-control" required></div>
+        <div class="small mt-1 texto-diferencia"></div>
+        <input name="observaciones" maxlength="255" class="form-control form-control-sm mt-2 mb-3" placeholder="Si no cuadra, ¿qué pasó?">
+        <% if (esForzado) { %><input name="motivo_forzado" maxlength="255" class="form-control form-control-sm mb-3" placeholder="Motivo del cierre forzado (obligatorio)" required><% } %>
+        <button class="btn btn-marca w-100"><i class="bi bi-lock"></i> Cerrar y ver corte</button>
+      </div>
+    </form>
+    <% } %>
+    <%- include('_cortes', { cortes }) %>
+  </div>
+</div>
+<% } %>
+
+<%- include('../partials/pie', { scriptsExtra: ['/js/cajas.js'] }) %>

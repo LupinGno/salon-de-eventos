@@ -1,0 +1,16 @@
+<%# Últimos cortes de la caja (US-71) %>
+<section class="card border-0 shadow-sm">
+  <div class="card-body p-4">
+    <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-receipt-cutoff"></i> Cortes anteriores</h2>
+    <% if (!cortes.length) { %><p class="small text-body-secondary mb-0">Todavía no hay cortes.</p><% } else { %>
+    <ul class="list-unstyled small mb-0">
+      <% cortes.forEach(t => { const d = Number(t.diferencia) %>
+      <li class="py-2 border-bottom d-flex justify-content-between gap-2">
+        <a href="/cajas/turnos/<%= t.id %>"><%= t.folio %> · <%= t.cajero %><br><span class="text-body-secondary"><%= f.fechaCorta(t.cerrado_en) %></span></a>
+        <span class="text-end">Contado <%= f.dinero(t.efectivo_contado) %><br><span class="<%= d === 0 ? 'text-success' : 'text-danger' %>"><%= d === 0 ? 'cuadró' : (d < 0 ? 'faltante ' : 'sobrante ') + f.dinero(Math.abs(d)) %></span></span>
+      </li>
+      <% }) %>
+    </ul>
+    <% } %>
+  </div>
+</section>

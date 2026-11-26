@@ -16,6 +16,15 @@ const MIGRACIONES = [
     { archivo: '008_sprint9_renta_brincolines.sql', tabla: 'pagos_renta' },
     { archivo: '009_modulo5_limpieza_incidencias.sql', tabla: 'tareas_limpieza' },
     { archivo: '009_modulo5_limpieza_incidencias.sql', tabla: 'incidencias' },
+    { archivo: '010_sprint11_turnos_movimientos_caja.sql', tabla: 'turnos_caja' },
+    { archivo: '010_sprint11_turnos_movimientos_caja.sql', tabla: 'v_movimientos_caja' },
+    { archivo: '011_modulo6_cajas_finanzas.sql', tabla: 'arqueos' },
+    { archivo: '011_modulo6_cajas_finanzas.sql', tabla: 'movimientos_caja', columna: 'estado' },
+    { archivo: '012_sprint13_horarios_compras_bitacora.sql', tabla: 'horario_cajas' },
+    { archivo: '012_sprint13_horarios_compras_bitacora.sql', tabla: 'horario_excepciones' },
+    { archivo: '012_sprint13_horarios_compras_bitacora.sql', tabla: 'compras_insumos' },
+    { archivo: '012_sprint13_horarios_compras_bitacora.sql', tabla: 'bitacora_admin' },
+    { archivo: '012_sprint13_horarios_compras_bitacora.sql', tabla: 'ingredientes', columna: 'costo_promedio' },
 ]
 
 async function revisar() {

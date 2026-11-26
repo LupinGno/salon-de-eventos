@@ -1,0 +1,62 @@
+<%- include('../partials/encabezado') %>
+<%
+const fechaLarga = iso => { const t = new Date(iso + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' }); return t[0].toUpperCase() + t.slice(1) }
+const estadoTexto = { en_curso: 'en curso', en_revision: 'en revisión', en_limpieza: 'en limpieza', en_reparacion: 'en reparación', baja: 'dada de baja' }
+const porDia = {}
+eventos.forEach(e => { (porDia[e.fecha] = porDia[e.fecha] || []).push(e) })
+const colorEstado = { apartada: 'text-bg-warning', liquidada: 'text-bg-info', en_curso: 'text-bg-primary', en_revision: 'text-bg-secondary', realizada: 'text-bg-success',
+                      reservada: 'text-bg-warning', instalada: 'text-bg-info', recolectada: 'text-bg-success' }
+%>
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1 class="h3 mb-0">Agenda de rentas</h1>
+    <p class="text-body-secondary mb-0">Salones y brincolines de los próximos <%= dias %> días, y los catálogos de los dos servicios. Solo administración.</p>
+  </div>
+  <form method="get" class="d-flex gap-2"><select name="dias" class="form-select" aria-label="Días">
+    <% [30, 60, 90, 180].forEach(d => { %><option value="<%= d %>" <%= d === dias ? 'selected' : '' %>><%= d %> días</option><% }) %></select><button class="btn btn-marca">Ver</button></form>
+</div>
+
+<%- include('_nav') %>
+
+<div class="row g-4">
+  <div class="col-xl-7">
+    <section class="card border-0 shadow-sm" id="agenda">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-calendar-week"></i> <%= eventos.length %> renta(s)</h2>
+        <% if (!eventos.length) { %><p class="small text-body-secondary mb-0">No hay rentas en esos días.</p><% } %>
+        <% Object.entries(porDia).forEach(([dia, lista]) => { %>
+        <div class="agenda-dia mb-3">
+          <div class="fw-semibold"><%= fechaLarga(dia) %></div>
+          <% lista.forEach(e => { %>
+          <a href="<%= e.url %>" class="d-flex justify-content-between gap-2 small py-1 text-decoration-none text-body border-bottom">
+            <span><i class="bi bi-<%= e.servicio === 'salon' ? 'building' : 'balloon' %>"></i> <strong><%= e.folio %></strong> · <%= e.lugar %> · <%= e.cliente %> (<%= e.telefono %>)
+              <%= e.servicio === 'salon' ? `· ${e.personas} personas` : `· ${e.direccion}` %></span>
+            <span class="text-nowrap"><span class="badge <%= colorEstado[e.estado] || 'text-bg-light' %>"><%= estadoTexto[e.estado] || e.estado %></span> <%= f.dinero(e.importe) %></span>
+          </a>
+          <% }) %>
+        </div>
+        <% }) %>
+      </div>
+    </section>
+  </div>
+  <div class="col-xl-5 d-grid gap-4 align-content-start">
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-building"></i> Salones</h2>
+        <table class="table table-sm small mb-0"><thead><tr><th>Salón</th><th>Cupo</th><th class="text-end">Renta</th><th class="text-end">Cuota</th></tr></thead>
+          <% salones.forEach(s => { %><tr class="<%= s.activo ? '' : 'text-body-secondary' %>"><td><%= s.nombre %><%= s.activo ? '' : ' (inactivo)' %></td><td><%= s.aforo_maximo %></td><td class="text-end"><%= f.dinero(s.precio_renta) %></td><td class="text-end"><%= f.dinero(s.cuota_garantia) %></td></tr><% }) %>
+        </table>
+      </div>
+    </section>
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-balloon"></i> Brincolines</h2>
+        <table class="table table-sm small mb-0"><thead><tr><th>Brincolín</th><th>Estado</th><th class="text-end">Día</th><th class="text-end">Garantía</th></tr></thead>
+          <% brincolines.forEach(b => { %><tr><td><%= b.nombre %> <span class="text-body-secondary text-nowrap"><%= Number(b.largo_m) %>×<%= Number(b.ancho_m) %> m</span></td><td><%= estadoTexto[b.estado] || b.estado %></td><td class="text-end"><%= f.dinero(b.precio_dia) %></td><td class="text-end"><%= f.dinero(b.garantia) %></td></tr><% }) %>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<%- include('../partials/pie') %>

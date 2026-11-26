@@ -1,0 +1,22 @@
+<%# Tabla de movimientos de un turno. Recibe filas %>
+<% const mediosT = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' } %>
+<% if (!filas.length) { %><p class="small text-body-secondary mb-0">Todavía no hay movimientos.</p><% } else { %>
+<div class="table-responsive">
+  <table class="table table-sm align-middle mb-0">
+    <thead><tr><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Persona</th><th>Medio</th><th>Atendió</th><th class="text-end">Monto</th></tr></thead>
+    <tbody>
+      <% filas.forEach(m => { %>
+      <tr>
+        <td class="text-nowrap small"><%= String(m.creado_en).slice(11, 16) %></td>
+        <td><span class="badge text-bg-light border"><%= m.tipo_texto %></span></td>
+        <td><%= m.concepto_texto %><div class="small text-body-secondary"><%= m.referencia %></div></td>
+        <td class="small"><%= m.persona %></td>
+        <td class="small"><%= mediosT[m.medio] %></td>
+        <td class="small"><%= m.usuario %></td>
+        <td class="text-end text-nowrap fw-semibold <%= m.monto < 0 ? 'text-danger' : '' %>"><%= m.monto < 0 ? '−' + f.dinero(-m.monto) : f.dinero(m.monto) %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<% } %>

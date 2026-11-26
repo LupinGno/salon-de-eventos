@@ -35,7 +35,8 @@ exports.configurar = async (req, res, next) => {
     try {
         await inventario.configurar(idValido(req.params.id) || 0, {
             unidad: req.body.unidad, stock_minimo: req.body.stock_minimo,
-            controlar: Boolean(req.body.controlar), stock_inicial: req.body.stock_inicial
+            controlar: Boolean(req.body.controlar), stock_inicial: req.body.stock_inicial,
+            costo: req.body.costo
         }, req.usuario.id)
         res.redirect(volver + '?ok=guardado')
     } catch (e) {

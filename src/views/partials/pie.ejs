@@ -2,8 +2,7 @@
     </div>
 </div>
 <%- include('scripts') %>
-<% if (usuario && usuario.modulos && (usuario.modulos.includes('cocina') || usuario.modulos.includes('caja-snacks'))) { %>
-<!-- Sprint 5: tiempo real (Socket.IO sirve su propio script, no hace falta internet) -->
+<% if (usuario && usuario.modulos && ['cocina', 'caja-snacks', 'cajas'].some(m => usuario.modulos.includes(m))) { %>
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/tiempo_real.js"></script>
 <% } %>

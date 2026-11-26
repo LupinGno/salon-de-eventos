@@ -21,7 +21,7 @@ async function usuarioDelToken(token) {
            FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE u.id = ?`, [datos.id])
     if (!u || !u.activo) throw new Error('Usuario inactivo')
     if (u.rol === 'Administrador') {
-        u.modulos = ['cocina', 'caja-snacks']
+        u.modulos = ['cocina', 'caja-snacks', 'cajas']
     } else {
         const [p] = await conexion.query('SELECT modulo FROM rol_modulos WHERE rol_id = ?', [u.rol_id])
         u.modulos = p.map(x => x.modulo)
@@ -50,6 +50,7 @@ function iniciar(servidorHttp) {
         const u = socket.data.usuario
         if (u.modulos.includes('cocina')) socket.join('cocina')
         if (u.modulos.includes('caja-snacks')) socket.join('recepcion')
+        if (u.modulos.includes('cajas')) socket.join('cajas')  
         socket.emit('listo', { salas: [...socket.rooms].filter(s => s !== socket.id) })
     })
     return io

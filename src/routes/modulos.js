@@ -47,9 +47,9 @@ const MODULOS = [
         descripcion: 'Liberar salones y brincolines después de limpiarlos e inspeccionarlos.'
     },
     {
-        clave: 'cajas', titulo: 'Cajas y finanzas', icono: 'cash-stack',
-        entrega: 'Sprint 12 — jueves 26 nov',
-        descripcion: 'Fondo inicial, movimientos, arqueo, cortes y reportes. Cada cajero ve solo su caja.'
+        clave: 'cajas', titulo: 'Cajas y finanzas', icono: 'cash-stack', ruta: '/cajas',
+        entrega: 'Sprint 12 — jueves 26 nov', listo: true,
+        descripcion: 'Fondo inicial, movimientos y saldo en vivo, arqueo y corte por cajero, aprobaciones, consolidado mensual, gráficas y reportes en PDF. Cada cajero ve solo su caja.'
     },
     {
         clave: 'consultas', titulo: 'Consultas', icono: 'search', ruta: '/consultas',

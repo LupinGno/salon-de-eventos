@@ -1,0 +1,61 @@
+<%- include('../partials/encabezado') %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <h1 class="h3 mb-0">Compras de insumos</h1>
+  <p class="text-body-secondary mb-0">Reposición de ingredientes. Siempre con cargo a administración: no se descuenta de ninguna caja.</p>
+</div>
+
+<%- include('_nav') %>
+<%- include('../partials/errores', { errores }) %>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-bag-plus"></i> Nueva compra</h2>
+        <% if (!ingredientes.length) { %>
+        <p class="small text-body-secondary">Ningún ingrediente tiene control de stock todavía. Actívalo en <a href="/catalogos/inventario">Inventario</a> antes de registrar una compra.</p>
+        <% } else { %>
+        <form method="post" action="/catalogos/compras" class="d-grid gap-2">
+          <select name="ingrediente_id" class="form-select" required>
+            <option value="">Ingrediente…</option>
+            <% ingredientes.forEach(i => { %>
+            <option value="<%= i.id %>"><%= i.nombre %> (<%= i.stock %> <%= i.unidad %> · costo <%= f.dinero(i.costo_promedio || 0) %>/u)</option>
+            <% }) %>
+          </select>
+          <div class="row g-2">
+            <div class="col-6"><input type="number" step="0.01" min="0.01" name="cantidad" class="form-control" placeholder="Cantidad comprada" required></div>
+            <div class="col-6"><input type="number" step="0.01" min="0.01" name="costo_total" class="form-control" placeholder="Costo total ($)" required></div>
+          </div>
+          <input name="proveedor" class="form-control" maxlength="120" placeholder="Proveedor (opcional)">
+          <button class="btn btn-marca"><i class="bi bi-check2"></i> Registrar compra</button>
+        </form>
+        <% } %>
+      </div>
+    </section>
+  </div>
+  <div class="col-lg-7">
+    <section class="card border-0 shadow-sm">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead><tr><th>Fecha</th><th>Ingrediente</th><th class="text-end">Cantidad</th><th class="text-end">Costo</th><th>Proveedor</th><th>Compró</th></tr></thead>
+          <tbody>
+            <% if (!historial.length) { %><tr><td colspan="6" class="text-center text-body-secondary py-4">No hay compras registradas.</td></tr><% } %>
+            <% historial.forEach(c => { %>
+            <tr>
+              <td class="text-nowrap"><%= f.fechaCorta(c.creado_en) %></td>
+              <td><%= c.ingrediente %></td>
+              <td class="text-end text-nowrap"><%= c.cantidad %> <%= c.unidad %></td>
+              <td class="text-end text-nowrap"><%= f.dinero(c.costo_total) %></td>
+              <td><%= c.proveedor || '—' %></td>
+              <td><%= c.usuario %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<%- include('../partials/pie') %>

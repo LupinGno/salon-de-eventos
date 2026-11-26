@@ -1,0 +1,88 @@
+<%- include('../partials/encabezado') %>
+
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <h1 class="h3 mb-0">Horario de cajas</h1>
+  <p class="text-body-secondary mb-0">Quién atiende cada caja cada día. Una persona solo puede tener una caja por día: no puede estar en dos sitios a la vez.</p>
+</div>
+
+<%- include('_nav') %>
+<%- include('../partials/errores', { errores }) %>
+
+<section class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-4">
+    <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-calendar2-week"></i> Horario semanal</h2>
+    <form method="post" action="/cajas/horario">
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle mb-3">
+          <thead><tr><th>Día</th><% cajas.forEach(c => { %><th><%= c.nombre %></th><% }) %></tr></thead>
+          <tbody>
+            <% dias.forEach(dia => { %>
+            <tr class="<%= dia === diaHoy ? 'table-active' : '' %>">
+              <td class="fw-semibold text-nowrap"><%= diasTexto[dia] %><% if (dia === diaHoy) { %> <span class="badge text-bg-primary">hoy</span><% } %></td>
+              <% cajas.forEach(c => { const asignado = grid[dia][c.id] %>
+              <td>
+                <select name="asig_<%= dia %>_<%= c.id %>" class="form-select form-select-sm">
+                  <option value="">— sin asignar —</option>
+                  <% empleados.forEach(e => { %>
+                  <option value="<%= e.id %>" <%= asignado && asignado.usuario_id === e.id ? 'selected' : '' %>><%= e.nombre %> (<%= e.rol %>)</option>
+                  <% }) %>
+                </select>
+              </td>
+              <% }) %>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <button class="btn btn-marca"><i class="bi bi-check2"></i> Guardar horario semanal</button>
+      <span class="small text-body-secondary ms-2">Si repites a la misma persona en dos cajas el mismo día, se queda con la última que marques.</span>
+    </form>
+  </div>
+</section>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-exclamation-diamond"></i> Cambio forzoso para una fecha</h2>
+        <form method="post" action="/cajas/horario/excepcion" class="d-grid gap-2">
+          <div class="row g-2">
+            <div class="col-6"><input type="date" name="fecha" class="form-control" min="<%= hoy %>" required></div>
+            <div class="col-6">
+              <select name="caja_id" class="form-select" required>
+                <option value="">Caja…</option>
+                <% cajas.forEach(c => { %><option value="<%= c.id %>"><%= c.nombre %></option><% }) %>
+              </select>
+            </div>
+          </div>
+          <select name="usuario_id" class="form-select">
+            <option value="">— cerrar la caja ese día (nadie la atiende) —</option>
+            <% empleados.forEach(e => { %><option value="<%= e.id %>"><%= e.nombre %> (<%= e.rol %>)</option><% }) %>
+          </select>
+          <input name="motivo" class="form-control" maxlength="200" placeholder="Motivo (ej. Ana enfermó el 30 de noviembre)" required>
+          <button class="btn btn-outline-danger"><i class="bi bi-arrow-repeat"></i> Forzar el cambio</button>
+        </form>
+      </div>
+    </section>
+  </div>
+  <div class="col-lg-7">
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Próximos cambios forzosos</h2>
+        <% if (!excepciones.length) { %><p class="small text-body-secondary mb-0">No hay cambios forzosos programados.</p><% } %>
+        <ul class="list-unstyled small mb-0">
+          <% excepciones.forEach(e => { %>
+          <li class="d-flex justify-content-between align-items-start gap-2 py-2 border-bottom">
+            <div><strong><%= f.fechaCorta(e.fecha) %></strong> · <%= e.caja %> → <%= e.usuario || 'nadie (cerrada)' %>
+              <div class="text-body-secondary"><%= e.motivo %> · forzado por <%= e.admin %></div></div>
+            <form method="post" action="/cajas/horario/excepcion/<%= e.id %>/eliminar">
+              <button class="btn btn-sm btn-outline-secondary" title="Quitar"><i class="bi bi-x-lg"></i></button></form>
+          </li>
+          <% }) %>
+        </ul>
+      </div>
+    </section>
+  </div>
+</div>
+
+<%- include('../partials/pie') %>

@@ -1,0 +1,76 @@
+<%- include('../partials/encabezado') %>
+<% const medios = { efectivo: 'efectivo', tarjeta: 'tarjeta', transferencia: 'transferencia' } %>
+<div class="pt-4 pb-2 mb-3 border-bottom">
+  <h1 class="h3 mb-0">Aprobaciones <span class="badge text-bg-primary align-middle fs-6"><%= extras.length + cancelaciones.length %> pendiente(s)</span></h1>
+  <p class="text-body-secondary mb-0">Las salidas de dinero que registra un cajero y las cancelaciones de comandas esperan tu visto bueno.</p>
+</div>
+
+<%- include('_nav') %>
+<%- include('../partials/errores', { errores }) %>
+
+<div class="row g-4">
+  <div class="col-xl-7 d-grid gap-4 align-content-start">
+    <section class="card border-0 shadow-sm" id="salidas-pendientes">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-cash-coin"></i> Préstamos, vales y gastos</h2>
+        <% if (!extras.length) { %><p class="small text-body-secondary mb-0">No hay salidas pendientes.</p><% } %>
+        <% extras.forEach(m => { %>
+        <div class="border rounded-3 p-3 mb-3 bg-body">
+          <div class="d-flex justify-content-between gap-2">
+            <div><strong><%= m.clase_texto %></strong> · <%= m.caja %><div class="small text-body-secondary"><%= m.concepto %></div>
+              <div class="small">Registró <%= m.registro %> · <%= f.fechaCorta(m.creado_en) %><%= m.responsable ? ` · Recibe ${m.responsable}` : '' %> · en <%= medios[m.medio] %></div></div>
+            <div class="fs-5 fw-semibold text-danger text-nowrap">−<%= f.dinero(-m.monto) %></div>
+          </div>
+          <% if (m.turno_estado !== 'abierto') { %><div class="small text-danger mt-1">El turno ya se cerró: solo se puede rechazar.</div><% } %>
+          <div class="d-flex gap-2 mt-2">
+            <% if (m.turno_estado === 'abierto') { %>
+            <form method="post" action="/cajas/extras/<%= m.id %>/aprobar" data-preguntar="Se descuentan <%= f.dinero(-m.monto) %> de <%= m.caja %>.">
+              <button class="btn btn-sm btn-marca"><i class="bi bi-check2"></i> Aprobar</button></form>
+            <% } %>
+            <form method="post" action="/cajas/extras/<%= m.id %>/rechazar" class="d-flex gap-2">
+              <input name="motivo" maxlength="150" class="form-control form-control-sm" placeholder="Motivo (opcional)">
+              <button class="btn btn-sm btn-outline-danger text-nowrap">Rechazar</button></form>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </section>
+    <section class="card border-0 shadow-sm" id="cancelaciones-pendientes">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-x-octagon"></i> Cancelaciones y devoluciones de snacks</h2>
+        <% if (!cancelaciones.length) { %><p class="small text-body-secondary mb-0">No hay cancelaciones pendientes.</p><% } %>
+        <% cancelaciones.forEach(k => { %>
+        <div class="border rounded-3 p-3 mb-3 bg-body">
+          <div class="d-flex justify-content-between gap-2">
+            <div><strong>Comanda #<%= k.folio %></strong> · <%= k.articulo || 'Toda la comanda' %><div class="small text-body-secondary"><%= k.motivo %></div>
+              <div class="small">Pidió <%= k.solicito %> · <%= f.fechaCorta(k.solicitada_en) %></div></div>
+            <div class="text-end small"><%= f.dinero(k.monto) %><br><% if (Number(k.monto_reembolso) > 0) { %><span class="text-danger">devolver <%= f.dinero(k.monto_reembolso) %> en <%= medios[k.medio_reembolso] %></span><% } else { %><span class="text-body-secondary">sin devolución</span><% } %></div>
+          </div>
+          <div class="d-flex gap-2 mt-2">
+            <form method="post" action="/caja/cancelaciones/<%= k.id %>/aprobar"><input type="hidden" name="volver" value="aprobaciones"><button class="btn btn-sm btn-marca"><i class="bi bi-check2"></i> Aprobar</button></form>
+            <form method="post" action="/caja/cancelaciones/<%= k.id %>/rechazar"><input type="hidden" name="volver" value="aprobaciones"><button class="btn btn-sm btn-outline-danger">Rechazar</button></form>
+            <a class="btn btn-sm btn-outline-secondary" href="/caja/comandas/<%= k.comanda_id %>">Ver comanda</a>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </section>
+  </div>
+  <div class="col-xl-5">
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Resueltas en los últimos 7 días</h2>
+        <% if (!resueltos.length) { %><p class="small text-body-secondary mb-0">Nada todavía.</p><% } %>
+        <ul class="list-unstyled small mb-0">
+          <% resueltos.forEach(m => { %>
+          <li class="py-2 border-bottom"><span class="badge <%= m.estado === 'aprobado' ? 'text-bg-success' : 'text-bg-secondary' %>"><%= m.estado %></span>
+            <%= m.clase_texto %> <%= f.dinero(Math.abs(m.monto)) %> · <%= m.caja.split('—')[0] %> · <%= m.concepto %>
+            <div class="text-body-secondary"><%= m.autorizo || '—' %> · <%= f.fechaCorta(m.autorizado_en) %><%= m.motivo_rechazo ? ` · ${m.motivo_rechazo}` : '' %></div></li>
+          <% }) %>
+        </ul>
+      </div>
+    </section>
+  </div>
+</div>
+
+<%- include('../partials/pie', { scriptsExtra: ['/js/cajas.js'] }) %>

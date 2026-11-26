@@ -1,0 +1,83 @@
+<%- include('../partials/encabezado') %>
+<%
+const medios = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' }
+const nombreMes = new Date(mes + '-15T12:00:00').toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })
+const m$ = v => v < 0 ? '−' + f.dinero(-v) : f.dinero(v)
+%>
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1 class="h3 mb-0">Consolidado de <%= nombreMes %></h1>
+    <p class="text-body-secondary mb-0">Lo que entró y salió de cada caja en el mes, por medio y por tipo.</p>
+  </div>
+  <form method="get" class="d-flex gap-2">
+    <input type="month" name="mes" value="<%= mes %>" class="form-control" aria-label="Mes">
+    <button class="btn btn-marca">Ver</button>
+    <a class="btn btn-outline-primary text-nowrap" target="_blank" href="/cajas/movimientos.pdf?desde=<%= desde %>&hasta=<%= hasta %>"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+  </form>
+</div>
+
+<%- include('_nav') %>
+
+<div class="table-responsive card border-0 shadow-sm mb-4">
+  <table class="table align-middle mb-0" id="tabla-consolidado">
+    <thead><tr><th>Caja</th><th class="text-end">Entradas</th><th class="text-end">Salidas</th><th class="text-end">Neto</th>
+      <% Object.values(medios).forEach(m => { %><th class="text-end"><%= m %></th><% }) %><th class="text-end">Cortes</th><th class="text-end">Diferencias</th></tr></thead>
+    <tbody>
+      <% cajas.forEach(c => { %>
+      <tr><td><a href="/cajas/movimientos?caja=<%= c.id %>&desde=<%= desde %>&hasta=<%= hasta %>"><%= c.nombre %></a></td>
+        <td class="text-end"><%= f.dinero(c.suma.entradas) %></td><td class="text-end text-danger"><%= m$(c.suma.salidas) %></td>
+        <td class="text-end fw-semibold"><%= m$(c.suma.neto) %></td>
+        <% Object.keys(medios).forEach(m => { %><td class="text-end"><%= m$(c.suma.porMedio[m]) %></td><% }) %>
+        <td class="text-end"><%= c.turnos.cerrados %></td>
+        <td class="text-end <%= c.turnos.diferencias === 0 ? '' : 'text-danger' %>"><%= m$(c.turnos.diferencias) %></td></tr>
+      <% }) %>
+    </tbody>
+    <tfoot class="fw-semibold"><tr><td>Total</td><td class="text-end"><%= f.dinero(total.entradas) %></td><td class="text-end text-danger"><%= m$(total.salidas) %></td>
+      <td class="text-end"><%= m$(total.neto) %></td><% Object.keys(medios).forEach(m => { %><td class="text-end"><%= m$(total.porMedio[m]) %></td><% }) %><td colspan="2"></td></tr></tfoot>
+  </table>
+</div>
+
+<!-- Sprint 13: compras de insumos, siempre con cargo a administración, nunca a una caja -->
+<section class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-4">
+    <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-graph-up-arrow"></i> Ganancia del mes</h2>
+    <div class="row g-3 text-center">
+      <div class="col-6 col-md-3"><div class="small text-body-secondary">Neto de las cajas</div><div class="fs-5 fw-semibold"><%= m$(total.neto) %></div></div>
+      <div class="col-6 col-md-3"><div class="small text-body-secondary">Compras de insumos (administración)</div><div class="fs-5 fw-semibold text-danger">−<%= f.dinero(comprasInsumos) %></div></div>
+      <div class="col-12 col-md-6"><div class="small text-body-secondary">Ganancia del mes</div><div class="fs-4 fw-bold <%= ganancia < 0 ? 'text-danger' : 'text-success' %>"><%= m$(ganancia) %></div></div>
+    </div>
+    <p class="small text-body-secondary mb-0 mt-2">Ventas − devoluciones − gastos − compras de insumos = ganancia del mes. <a href="/catalogos/compras">Ver compras de insumos</a>.</p>
+  </div>
+</section>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <section class="card border-0 shadow-sm h-100">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Por tipo de movimiento</h2>
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Tipo</th><% cajas.forEach(c => { %><th class="text-end"><%= c.nombre.split('—')[0] %></th><% }) %><th class="text-end">Total</th></tr></thead>
+          <% Object.entries(TIPOS).forEach(([k, v]) => { %>
+          <tr><td><%= v %></td><% cajas.forEach(c => { %><td class="text-end small"><%= m$(c.suma.porTipo[k]) %></td><% }) %><td class="text-end fw-semibold"><%= m$(total.porTipo[k]) %></td></tr>
+          <% }) %>
+        </table>
+      </div>
+    </section>
+  </div>
+  <div class="col-lg-6">
+    <!-- US-73: cada devolución por el mismo medio con que se pagó -->
+    <section class="card border-0 shadow-sm h-100 <%= verificacion.distintas.length ? 'verificacion-mal' : 'verificacion-ok' %>" id="verificacion-medios">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3"><i class="bi bi-arrow-left-right"></i> Devoluciones por el mismo medio</h2>
+        <% if (!verificacion.distintas.length) { %>
+        <p class="mb-0"><i class="bi bi-check-circle-fill text-success"></i> Las <strong><%= verificacion.revisadas %></strong> devoluciones del mes (cuotas, garantías, reembolsos) salieron por el mismo medio con que se pagó.</p>
+        <% } else { %>
+        <p class="text-danger">De <%= verificacion.revisadas %> devoluciones, <%= verificacion.distintas.length %> salieron por otro medio:</p>
+        <ul class="small mb-0"><% verificacion.distintas.forEach(d => { %><li><%= d.referencia %> · <%= d.concepto_texto %> <%= m$(d.monto) %>: pagó en <%= d.pagado %>, se devolvió en <%= d.devuelto %></li><% }) %></ul>
+        <% } %>
+      </div>
+    </section>
+  </div>
+</div>
+
+<%- include('../partials/pie') %>

@@ -1,0 +1,21 @@
+<%
+const seccionesCajas = [
+  ['/cajas', 'Mis cajas', 'cash-stack', r => r === '/cajas' || /^\/cajas\/\d+/.test(r)],
+  ['/cajas/movimientos', 'Movimientos y reportes', 'list-columns-reverse', r => r.startsWith('/cajas/movimientos') || r.startsWith('/cajas/turnos')]
+]
+// Sprint 12: lo que solo ve administración (US-72, US-74, US-76, US-78)
+if (usuario.rol === 'Administrador') seccionesCajas.push(
+  ['/cajas/aprobaciones', 'Aprobaciones', 'shield-check', r => r.startsWith('/cajas/aprobaciones')],
+  ['/cajas/consolidado', 'Consolidado mensual', 'calendar3', r => r.startsWith('/cajas/consolidado')],
+  ['/cajas/graficas', 'Gráficas', 'bar-chart-line', r => r.startsWith('/cajas/graficas')],
+  ['/cajas/agenda', 'Agenda de rentas', 'calendar-week', r => r.startsWith('/cajas/agenda')],
+  // Sprint 13: horario por día y bitácora de acciones forzadas
+  ['/cajas/horario', 'Horario', 'calendar2-week', r => r.startsWith('/cajas/horario')],
+  ['/cajas/bitacora', 'Bitácora', 'journal-check', r => r.startsWith('/cajas/bitacora')]
+)
+%>
+<nav class="nav nav-pills nav-catalogo gap-1 mb-4 flex-nowrap overflow-auto pb-1" aria-label="Secciones de cajas y finanzas">
+  <% seccionesCajas.forEach(([ruta, nombre, icono, activa]) => { %>
+    <a class="nav-link text-nowrap <%= activa(rutaActual) ? 'active' : '' %>" href="<%= ruta %>"><i class="bi bi-<%= icono %>"></i> <%= nombre %></a>
+  <% }) %>
+</nav>

@@ -151,16 +151,23 @@ async function registrarMovimiento(ingredienteId, { tipo, cantidad, nota }, usua
 }
 
 // unidad, mínimo y si se controla.
-async function configurar(ingredienteId, { unidad, stock_minimo, controlar, stock_inicial }, usuarioId) {
+async function configurar(ingredienteId, { unidad, stock_minimo, controlar, stock_inicial, costo }, usuarioId) {
     if (!UNIDADES[unidad]) throw new ErrorNegocio('Elige la unidad: pieza, gramos o mililitros.', 422)
     const minimo = Number(stock_minimo)
     if (!Number.isFinite(minimo) || minimo < 0 || minimo > 1000000) throw new ErrorNegocio('El mínimo debe ser 0 o más.', 422)
+    // Costo por unidad
+    const sinCosto = costo === undefined || String(costo).trim() === ''
+    const precio = sinCosto ? null : Number(costo)
+    if (!sinCosto && (!Number.isFinite(precio) || precio < 0 || precio > 100000)) {
+        throw new ErrorNegocio('El costo por unidad debe ser 0 o más (déjalo vacío si no lo sabes).', 422)
+    }
     const db = await conexion.getConnection()
     try {
         await db.beginTransaction()
         const [[ing]] = await db.query('SELECT id, stock FROM ingredientes WHERE id = ? FOR UPDATE', [ingredienteId])
         if (!ing) throw new ErrorNegocio('Ese ingrediente no existe.', 404)
-        await db.query('UPDATE ingredientes SET unidad = ?, stock_minimo = ? WHERE id = ?', [unidad, minimo, ing.id])
+        await db.query('UPDATE ingredientes SET unidad = ?, stock_minimo = ?, costo_promedio = ? WHERE id = ?',
+            [unidad, minimo, precio === null ? null : redondear(precio), ing.id])
         if (controlar && ing.stock === null) {
             const inicial = Number(stock_inicial)
             if (!Number.isFinite(inicial) || inicial < 0) throw new ErrorNegocio('Escribe con cuánto stock arranca.', 422)

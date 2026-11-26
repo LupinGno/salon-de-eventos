@@ -1,0 +1,106 @@
+<%- include('../partials/encabezado') %>
+<%
+const medios = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' }
+const t = turno, cerrado = t.estado === 'cerrado'
+const dif = Number(t.diferencia || 0)
+const m$ = v => v < 0 ? '−' + f.dinero(-v) : f.dinero(v)
+%>
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1 class="h3 mb-0">Corte <%= t.folio %> <span class="badge <%= cerrado ? 'text-bg-secondary' : 'text-bg-success' %> fs-6 align-middle"><%= cerrado ? 'Cerrado' : 'Abierto' %></span></h1>
+    <p class="text-body-secondary mb-0"><%= t.caja %> · Turno de <%= t.cajero %> · <%= f.fechaCorta(t.abierto_en) %><%= cerrado ? ` → ${f.fechaCorta(t.cerrado_en)} (cerró ${t.cerro})` : '' %></p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="/cajas/<%= t.caja_id %>" class="btn btn-outline-primary"><i class="bi bi-arrow-left"></i> Caja</a>
+    <a href="/cajas/turnos/<%= t.id %>/corte.pdf" target="_blank" class="btn btn-marca"><i class="bi bi-file-earmark-pdf"></i> Corte en PDF</a>
+  </div>
+</div>
+
+<%- include('_nav') %>
+<%- include('../partials/errores', { errores }) %>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-4">
+    <section class="card border-0 shadow-sm h-100 <%= cerrado ? (dif === 0 ? 'verificacion-ok' : 'verificacion-mal') : '' %>" id="arqueo-final">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Arqueo del efectivo</h2>
+        <% if (cerrado) { %>
+        <table class="table table-sm mb-2">
+          <tr><td>Fondo inicial</td><td class="text-end"><%= f.dinero(t.fondo_inicial) %></td></tr>
+          <tr><td>Esperado según el sistema</td><td class="text-end"><%= f.dinero(t.efectivo_esperado) %></td></tr>
+          <tr><td>Contado</td><td class="text-end"><%= f.dinero(t.efectivo_contado) %></td></tr>
+          <tr class="fw-semibold"><td>Diferencia</td><td class="text-end <%= dif === 0 ? 'text-success' : 'text-danger' %>"><%= dif === 0 ? 'Cuadra' : (dif < 0 ? 'Faltante ' : 'Sobrante ') + f.dinero(Math.abs(dif)) %></td></tr>
+        </table>
+        <% if (t.observaciones) { %><p class="small mb-0"><strong>Observaciones:</strong> <%= t.observaciones %></p><% } %>
+        <% } else { %>
+        <p class="small text-body-secondary mb-0">El turno sigue abierto: el corte se hace al cerrarlo desde la caja.</p>
+        <% } %>
+      </div>
+    </section>
+  </div>
+  <div class="col-lg-4">
+    <section class="card border-0 shadow-sm h-100" id="corte-medios">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Corte por medio</h2>
+        <%- include('_saldo', { resumen, compacto: true }) %>
+      </div>
+    </section>
+  </div>
+  <div class="col-lg-4">
+    <section class="card border-0 shadow-sm h-100">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Por tipo</h2>
+        <table class="table table-sm small mb-0">
+          <% Object.entries(resumen.porTipo).filter(([, v]) => v !== 0).forEach(([k, v]) => { %>
+          <tr><td><%= TIPOS[k] %></td><td class="text-end <%= v < 0 ? 'text-danger' : '' %>"><%= v < 0 ? '−' + f.dinero(-v) : f.dinero(v) %></td></tr>
+          <% }) %>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+<div class="row g-4 mb-4">
+  <div class="col-xl-6">
+    <section class="card border-0 shadow-sm h-100" id="corte-cajeros">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Por cajero</h2>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Quién</th><th class="text-end">Efectivo</th><th class="text-end">Tarjeta</th><th class="text-end">Transferencia</th><th class="text-end">Total</th></tr></thead>
+            <tbody>
+              <% porUsuario.forEach(u => { %>
+              <tr><td><%= u.usuario %> <span class="small text-body-secondary">(<%= u.n %>)</span></td>
+                <td class="text-end text-nowrap"><%= m$(u.efectivo) %></td><td class="text-end text-nowrap"><%= m$(u.tarjeta) %></td>
+                <td class="text-end text-nowrap"><%= m$(u.transferencia) %></td><td class="text-end text-nowrap fw-semibold"><%= m$(u.total) %></td></tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+  <div class="col-xl-6">
+    <% if (arqueos.length) { %>
+    <section class="card border-0 shadow-sm h-100">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Arqueos</h2>
+        <ul class="list-unstyled small mb-0">
+          <% arqueos.forEach(a => { const d = Number(a.diferencia) %>
+          <li class="py-1 border-bottom"><strong><%= String(a.creado_en).slice(11, 16) %></strong> · <%= a.tipo === 'cierre' ? 'Cierre' : 'Parcial' %> · <%= a.usuario %>:
+            contó <%= f.dinero(a.efectivo_contado) %> de <%= f.dinero(a.efectivo_esperado) %>
+            <span class="<%= d === 0 ? 'text-success' : 'text-danger' %>"><%= d === 0 ? '(cuadra)' : `(${d < 0 ? 'faltan' : 'sobran'} ${f.dinero(Math.abs(d))})` %></span><%= a.observaciones ? ` — ${a.observaciones}` : '' %></li>
+          <% }) %>
+        </ul>
+      </div>
+    </section>
+    <% } %>
+  </div>
+</div>
+    <section class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 text-uppercase texto-seccion mb-3">Movimientos del turno</h2>
+        <%- include('_tabla_movs', { filas }) %>
+      </div>
+    </section>
+
+<%- include('../partials/pie') %>

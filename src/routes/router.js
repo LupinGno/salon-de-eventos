@@ -14,16 +14,20 @@ const rentas = require('../controllers/rentasCatalogoController')
 const api = require('../controllers/apiController')
 const cajaCtl = require('../controllers/cajaController')
 const cocinaCtl = require('../controllers/cocinaController')
+const cajasCtl = require('../controllers/cajasController')
+const comprasCtl = require('../controllers/comprasController')
 const { autenticado, permitirRoles, permitirModulo, prohibido, soloInvitados } = require('./auth')
 const { ROLES, buscarModulo } = require('./modulos')
 const { campoImagen } = require('../controllers/subidas')
 const formatos = require('../controllers/formatos')
+const tiempoReal = require('../controllers/tiempoReal')
 
 const soloAdmin = [autenticado, permitirRoles(ROLES.ADMIN)]
 const catalogo = [autenticado, permitirModulo('catalogos')]
 const enSalones = [autenticado, permitirModulo('salones')]
 const enBrincolines = [autenticado, permitirModulo('brincolines')]
 const enLimpieza = [autenticado, permitirModulo('limpieza')]
+const enCajas = [autenticado, permitirModulo('cajas')]
 const conImagen = campoImagen('archivo')
 
 // Mensajes de éxito comunes
@@ -49,6 +53,12 @@ const MENSAJES = {
     reparado: 'El brincolín regresó de reparación y pasó a Limpieza.',
     revisado: 'Revisión guardada.',
     'salon-recibido': 'Salón recibido: pasa a Limpieza, que decide la cuota.',
+    'turno-abierto': 'Caja abierta con su fondo inicial.',
+    'extra-registrado': 'Movimiento registrado en la caja. Si es una salida de un cajero, espera la aprobación del administrador.',
+    'arqueo-guardado': 'Arqueo guardado con su diferencia.',
+    'turno-cerrado': 'Turno cerrado. Este es el corte.',
+    'salida-aprobada': 'Salida aprobada: ya se descontó de la caja.',
+    'salida-rechazada': 'Salida rechazada: no se descontó nada.',
     'reserva-liquidada': 'Renta liquidada: ya se puede entregar el salón el día del evento.',
     'alimentos-cancelados': 'Alimentos cancelados. Si hubo devolución, aparece en los pagos con el medio y la persona.',
     'salon-entregado': 'Salón entregado al responsable.',
@@ -57,6 +67,14 @@ const MENSAJES = {
     'cancelacion-rechazada': 'La solicitud de cancelación se rechazó.',
     'no-existe': 'Ese registro no existe.', 'en-uso': 'No se puede eliminar porque ya tiene movimientos; dalo de baja.'
 }
+// cuando un cobro, devolución o movimiento de caja sale bien, las pantallas de cajas se actualizan solas
+const MUEVE_DINERO = /^\/(caja|cajas|salones|brincolines|limpieza)\//
+router.use((req, res, next) => {
+    if (req.method === 'POST' && MUEVE_DINERO.test(req.path)) {
+        res.on('finish', () => { if (res.statusCode < 400) tiempoReal.emitir('cajas', 'cajas:cambio', { ruta: req.path }) })
+    }
+    next()
+})
 router.use((req, res, next) => {
     res.locals.f = formatos
     const ok = MENSAJES[req.query.ok]
@@ -127,7 +145,7 @@ router.post('/salones/reservas/:id/recibir', enSalones, reservasCtl.recibir)
 router.post('/salones/reservas/:id/cobrar-danos', enSalones, reservasCtl.cobrarDanos)
 router.get('/salones/reservas/:id/contrato.pdf', enSalones, reservasCtl.contrato)
 router.get('/salones/reservas/:id/comprobante.pdf', enSalones, reservasCtl.comprobante)
-// renta de brincolines a domicilio 
+// renta de brincolines a domicilio
 router.get('/brincolines', enBrincolines, brincolinesCtl.catalogo)
 router.get('/brincolines/rentar', enBrincolines, brincolinesCtl.formulario)
 router.post('/brincolines/rentas', enBrincolines, brincolinesCtl.crear)
@@ -148,11 +166,38 @@ router.post('/brincolines/equipo/:id/reparado', enBrincolines, brincolinesCtl.re
 router.get('/limpieza', enLimpieza, limpiezaCtl.pendientes)
 router.post('/limpieza/tareas/:id/brincolin', enLimpieza, limpiezaCtl.revisarBrincolin)
 router.post('/limpieza/tareas/:id/salon', enLimpieza, limpiezaCtl.revisarSalon)
+// cajas y finanzas
+router.get('/cajas', enCajas, cajasCtl.panel)
+router.get('/cajas/movimientos', enCajas, cajasCtl.movimientos)
+// reportes, cortes y lo que solo ve administración
+router.get('/cajas/movimientos.pdf', enCajas, cajasCtl.reportePdf)
+router.get('/cajas/turnos/:id', enCajas, cajasCtl.corte)
+router.get('/cajas/turnos/:id/corte.pdf', enCajas, cajasCtl.cortePdf)
+router.get('/cajas/horario', soloAdmin, cajasCtl.horario)
+router.post('/cajas/horario', soloAdmin, cajasCtl.guardarHorario)
+router.post('/cajas/horario/excepcion', soloAdmin, cajasCtl.forzarHorario)
+router.post('/cajas/horario/excepcion/:id/eliminar', soloAdmin, cajasCtl.quitarExcepcion)
+router.get('/cajas/bitacora', soloAdmin, cajasCtl.bitacora)
+router.get('/cajas/aprobaciones', soloAdmin, cajasCtl.aprobaciones)
+router.post('/cajas/extras/:id/aprobar', soloAdmin, cajasCtl.aprobarExtra)
+router.post('/cajas/extras/:id/rechazar', soloAdmin, cajasCtl.rechazarExtra)
+router.get('/cajas/consolidado', soloAdmin, cajasCtl.consolidado)
+router.get('/cajas/graficas', soloAdmin, cajasCtl.graficas)
+router.get('/cajas/agenda', soloAdmin, cajasCtl.agenda)
+router.get('/cajas/:id', enCajas, cajasCtl.detalle)
+router.post('/cajas/:id/turno', enCajas, cajasCtl.abrir)
+router.post('/cajas/:id/extras', enCajas, cajasCtl.extra)
+router.post('/cajas/:id/arqueo', enCajas, cajasCtl.arqueo)
+router.post('/cajas/:id/cerrar', enCajas, cajasCtl.cerrar)
 // inventario de ingredientes
 router.get('/catalogos/inventario', catalogo, inventarioCtl.vista)
 router.get('/catalogos/inventario/:id', catalogo, inventarioCtl.historial)
 router.post('/catalogos/inventario/:id/movimiento', catalogo, inventarioCtl.movimiento)
 router.post('/catalogos/inventario/:id/configurar', catalogo, inventarioCtl.configurar)
+
+// compras de insumos
+router.get('/catalogos/compras', soloAdmin, comprasCtl.lista)
+router.post('/catalogos/compras', soloAdmin, comprasCtl.registrar)
 
 // Temporadas
 router.get('/catalogos/temporadas', catalogo, catalogos.temporadas)

@@ -113,4 +113,6 @@
         }
     })
     socket.on('cocina:cambio', d => avisarPagina('cocina:cambio', d))
+    // Sprint 12: entró o salió dinero de alguna caja
+    socket.on('cajas:cambio', d => avisarPagina('cajas:cambio', d))
 })()

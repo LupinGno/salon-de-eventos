@@ -19,7 +19,7 @@
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0">
       <thead>
-        <tr><th scope="col">Ingrediente</th><th scope="col">Stock</th><th scope="col">Mínimo</th><th scope="col">Estado</th><th scope="col">Usado hoy</th><th scope="col" style="min-width:420px">Registrar</th><th scope="col"></th></tr>
+        <tr><th scope="col">Ingrediente</th><th scope="col">Stock</th><th scope="col">Mínimo</th><th scope="col">Costo</th><th scope="col">Estado</th><th scope="col">Usado hoy</th><th scope="col" style="min-width:420px">Registrar</th><th scope="col"></th></tr>
       </thead>
       <tbody>
       <% ingredientes.forEach(i => { const controlado = i.stock !== null %>
@@ -35,6 +35,13 @@
             <% } else { %><span class="text-body-secondary">—</span><% } %>
           </td>
           <td class="text-nowrap"><%= controlado ? t(i.stock_minimo, i.unidad) : '—' %></td>
+          <td class="text-nowrap">
+            <% if (i.costo_promedio === null) { %>
+              <a class="small text-body-secondary" href="/catalogos/inventario/<%= i.id %>" title="Ponle costo">sin costo</a>
+            <% } else { %>
+              <%= f.dinero(i.costo_promedio) %><span class="small text-body-secondary">/<%= i.unidad_corta %></span>
+            <% } %>
+          </td>
           <td><span class="badge <%= i.estado.clase %>"><%= i.estado.texto %></span></td>
           <td class="text-nowrap"><%= Number(i.usado_hoy) ? t(i.usado_hoy, i.unidad) : '—' %></td>
           <td>

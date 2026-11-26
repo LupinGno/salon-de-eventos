@@ -104,7 +104,9 @@ exports.resolver = aprobar => async (req, res, next) => {
     try {
         const r = await caja.resolverCancelacion(entero(req.params.id, 1), aprobar, req.usuario.id)
         avisarCancelacion()
-        res.redirect(`/caja/cancelaciones?ok=${!aprobar ? 'cancelacion-rechazada' : r.con_reembolso ? 'cancelada-reembolso' : 'cancelada'}`)
+        // Sprint 12: también se aprueban desde Cajas → Aprobaciones
+        const volver = req.body && req.body.volver === 'aprobaciones' ? '/cajas/aprobaciones' : '/caja/cancelaciones'
+        res.redirect(`${volver}?ok=${!aprobar ? 'cancelacion-rechazada' : r.con_reembolso ? 'cancelada-reembolso' : 'cancelada'}`)
     } catch (e) {
         if (e instanceof caja.ErrorNegocio) return res.redirect('/caja/cancelaciones?ok=no-existe')
         next(e)

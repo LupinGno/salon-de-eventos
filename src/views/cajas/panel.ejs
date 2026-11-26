@@ -1,0 +1,42 @@
+<%- include('../partials/encabezado') %>
+<%
+const servicioIcono = { snacks: 'cup-straw', salones: 'building', brincolines: 'balloon' }
+%>
+<div class="pt-4 pb-2 mb-3 border-bottom d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1 class="h3 mb-0">Cajas y finanzas</h1>
+    <p class="text-body-secondary mb-0">Cada servicio cobra en su propia caja. Abre el turno con el fondo inicial antes de cobrar.</p>
+  </div>
+  <span class="badge rounded-pill estado-conexion" data-estado-conexion aria-live="polite"><i class="bi bi-circle-fill"></i> Conectando…</span>
+</div>
+
+<%- include('_nav') %>
+<%- include('../partials/errores', { errores }) %>
+
+<% if (!cajas.length) { %>
+<div class="alert alert-secondary">Tu puesto no tiene ninguna caja asignada.</div>
+<% } %>
+
+<div class="row g-4" id="panel-cajas" data-en-vivo>
+  <% cajas.forEach(c => { %>
+  <div class="col-xl-6">
+    <section class="card border-0 shadow-sm h-100" id="caja-<%= c.id %>">
+      <div class="card-body p-4 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+          <h2 class="h5 mb-0"><i class="bi bi-<%= servicioIcono[c.servicio] %>"></i> <%= c.nombre %></h2>
+          <% if (c.turno) { %><span class="badge text-bg-success">Abierta</span><% } else { %><span class="badge text-bg-secondary">Cerrada</span><% } %>
+        </div>
+        <% if (c.turno) { %>
+          <p class="small text-body-secondary mb-2">Turno de <strong><%= c.turno.cajero %></strong> desde <%= f.fechaCorta(c.turno.abierto_en) %></p>
+          <%- include('_saldo', { resumen: c.resumen, compacto: true }) %>
+        <% } else { %>
+          <p class="small text-body-secondary">Sin turno abierto. Hoy se movieron <%= f.dinero(c.hoy.neto) %> en <%= c.hoy.movimientos %> movimiento(s).</p>
+        <% } %>
+        <div class="mt-auto pt-3"><a href="/cajas/<%= c.id %>" class="btn btn-marca"><i class="bi bi-box-arrow-in-right"></i> <%= c.turno ? 'Ver caja' : 'Abrir caja' %></a></div>
+      </div>
+    </section>
+  </div>
+  <% }) %>
+</div>
+
+<%- include('../partials/pie', { scriptsExtra: ['/js/cajas.js'] }) %>

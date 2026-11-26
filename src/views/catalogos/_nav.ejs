@@ -10,7 +10,10 @@ const secciones = [
   ['/catalogos/imagenes', 'Imágenes', 'images'],
   ['/catalogos/menu', 'Vista del menú', 'eye']
 ]
-if (usuario.rol === 'Administrador') secciones.push(['/catalogos/permisos', 'Permisos', 'shield-lock'])
+if (usuario.rol === 'Administrador') secciones.push(
+  ['/catalogos/compras', 'Compras de insumos', 'bag-plus'],   // Sprint 13
+  ['/catalogos/permisos', 'Permisos', 'shield-lock']
+)
 %>
 <nav class="nav nav-pills nav-catalogo gap-1 mb-4 flex-nowrap flex-xl-wrap overflow-auto pb-1" aria-label="Secciones del catálogo">
   <% secciones.forEach(([ruta, nombre, icono]) => { %>

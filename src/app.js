@@ -30,6 +30,7 @@ const modulos = path.join(__dirname, '..', 'node_modules')
 app.use('/vendor/bootstrap', express.static(path.join(modulos, 'bootstrap', 'dist')))
 app.use('/vendor/bootstrap-icons', express.static(path.join(modulos, 'bootstrap-icons', 'font')))
 app.use('/vendor/sweetalert2', express.static(path.join(modulos, 'sweetalert2', 'dist')))
+app.use('/vendor/chart.js', express.static(path.join(modulos, 'chart.js', 'dist')))   // Sprint 12: gráficas
 
 // Recibir datos de formularios
 app.use(express.urlencoded({ extended: false }))

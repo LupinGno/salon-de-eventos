@@ -1,0 +1,10 @@
+<%# Saldo de un turno por medio (US-75). Recibe resumen y, en el panel, compacto %>
+<% const s$ = v => v < 0 ? '−' + f.dinero(-v) : f.dinero(v) %>
+<% const col = typeof compacto !== 'undefined' && compacto ? 'col-6' : 'col-6 col-lg-3' %>
+<div class="row g-2 text-center saldo-caja">
+  <div class="<%= col %>"><div class="p-2 rounded bg-body-tertiary"><div class="small text-body-secondary"><i class="bi bi-cash"></i> Efectivo en caja</div><div class="fs-5 fw-semibold" data-saldo="efectivo"><%= s$(resumen.saldo.efectivo) %></div></div></div>
+  <div class="<%= col %>"><div class="p-2 rounded bg-body-tertiary"><div class="small text-body-secondary"><i class="bi bi-credit-card"></i> Tarjeta</div><div class="fs-5 fw-semibold" data-saldo="tarjeta"><%= s$(resumen.saldo.tarjeta) %></div></div></div>
+  <div class="<%= col %>"><div class="p-2 rounded bg-body-tertiary"><div class="small text-body-secondary"><i class="bi bi-bank"></i> Transferencia</div><div class="fs-5 fw-semibold" data-saldo="transferencia"><%= s$(resumen.saldo.transferencia) %></div></div></div>
+  <div class="<%= col %>"><div class="p-2 rounded bg-primary-subtle"><div class="small text-body-secondary">Total</div><div class="fs-5 fw-semibold" data-saldo="total"><%= s$(resumen.saldo.total) %></div></div></div>
+</div>
+<div class="small text-body-secondary mt-2">Fondo inicial <%= f.dinero(resumen.fondo) %> · Entró <%= f.dinero(resumen.entradas) %> · Salió <span class="<%= resumen.salidas < 0 ? 'text-danger' : '' %>"><%= f.dinero(-resumen.salidas) %></span> · <%= resumen.movimientos %> movimiento(s)</div>
